@@ -2,7 +2,6 @@
 import argparse, datetime, json, re, sys, time, asyncio, os, logging
 from urllib.parse import urlparse
 from typing import List, Dict, Any, Optional
-from enum import Enum
 
 import feedparser
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -10,48 +9,26 @@ import yaml
 import aiohttp
 import aiofiles
 from bs4 import BeautifulSoup
-from newspaper import Article
 from firecrawl import FirecrawlApp
+
+from labnotes.utils import setup_logging
+from labnotes.scraping import (
+    ScrapingMethod,
+    domain_of,
+    is_pdf_url,
+    scrape_article_content,
+    follow_aggregator_link
+)
 
 # Set up logging
 logger = logging.getLogger(__name__)
 
-class ScrapingMethod(Enum):
-    NEWSPAPER = "newspaper"
-    BEAUTIFULSOUP = "beautifulsoup" 
-    FIRECRAWL = "firecrawl"
-    AUTO = "auto"
-
-def setup_logging(level: str = "INFO") -> None:
-    """Setup logging configuration."""
-    numeric_level = getattr(logging, level.upper(), None)
-    if not isinstance(numeric_level, int):
-        raise ValueError(f'Invalid log level: {level}')
-    
-    logging.basicConfig(
-        level=numeric_level,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
-    )
-    
-    # Set third-party loggers to WARNING to reduce noise
-    logging.getLogger('aiohttp').setLevel(logging.WARNING)
-    logging.getLogger('urllib3').setLevel(logging.WARNING)
-    logging.getLogger('requests').setLevel(logging.WARNING)
-
-def domain_of(link: str) -> str:
-    try:
-        domain = urlparse(link).netloc.replace("www.","")
-        logger.debug(f"Extracted domain: {domain} from {link}")
-        return domain
-    except Exception as e:
-        logger.warning(f"Failed to extract domain from {link}: {e}")
-        return ""
 
 def clean_html(s: str) -> str:
     cleaned = re.sub("<[^<]+?>", "", s or "")
     logger.debug(f"Cleaned HTML: {len(s or '')} -> {len(cleaned)} chars")
     return cleaned
+
 
 def extract_date(entry) -> str:
     """Extract publication date from feed entry and return as ISO string."""
@@ -66,6 +43,7 @@ def extract_date(entry) -> str:
     if dt:
         return dt.strftime("%Y-%m-%d %H:%M")
     return ""
+
 
 def within_hours(entry, hours: int) -> bool:
     cutoff = datetime.datetime.utcnow() - datetime.timedelta(hours=hours)
@@ -84,6 +62,7 @@ def within_hours(entry, hours: int) -> bool:
     else:
         logger.debug(f"No valid date found for entry, excluding from results")
     return within_range
+
 
 def score_item(item: Dict[str, Any], kw: Dict[str, Any]) -> int:
     text = f"{item['title']} {item.get('summary','')} {item.get('content','')}".lower()
@@ -115,6 +94,7 @@ def score_item(item: Dict[str, Any], kw: Dict[str, Any]) -> int:
                 f"source_adjustments={source_adjustments}")
     return s
 
+
 def extract_content(entry) -> str:
     """Extract content from feed entry, preferring content over summary."""
     content = ""
@@ -132,289 +112,34 @@ def extract_content(entry) -> str:
     
     return clean_html(content)
 
-async def scrape_with_newspaper(session: aiohttp.ClientSession, url: str, timeout: int = 10) -> str:
-    """Scrape content using newspaper3k library."""
-    logger.debug(f"Starting newspaper scraping for: {url}")
-    try:
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-        }
-        
-        async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=timeout)) as response:
-            response.raise_for_status()
-            html_content = await response.text()
-        
-        logger.debug(f"Downloaded HTML content: {len(html_content)} chars")
-        
-        # Use newspaper3k to parse the article
-        article = Article(url, language='en')
-        article.set_html(html_content)
-        article.parse()
-        
-        # Get the article text
-        text = article.text.strip()
-        
-        # Add title if available and not already in text
-        if article.title and article.title not in text[:200]:
-            text = f"{article.title}\n\n{text}"
-        
-        result = text[:3000]  # Limit content size
-        logger.info(f"Newspaper3k successfully scraped {url}: {len(result)} chars extracted")
-        return result
-        
-    except Exception as e:
-        logger.warning(f"Newspaper3k failed for {url}: {e}")
-        return ""
 
-async def scrape_with_beautifulsoup(session: aiohttp.ClientSession, url: str, timeout: int = 10) -> str:
-    """Scrape content using BeautifulSoup (fallback method)."""
-    logger.debug(f"Starting BeautifulSoup scraping for: {url}")
-    try:
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-        }
+def extract_original_source(link: str, feed_url: str, entry) -> str:
+    """Extract the original source domain from a feed entry."""
+    # First try to get domain from the link
+    source = domain_of(link)
+    
+    # If link is from an aggregator, try to find original source in entry metadata
+    if "takara.ai" in source or "aggregator" in source.lower():
+        # Check for source information in entry attributes
+        if hasattr(entry, 'source') and hasattr(entry.source, 'href'):
+            original_source = domain_of(entry.source.href)
+            if original_source and original_source != source:
+                return original_source
         
-        async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=timeout)) as response:
-            response.raise_for_status()
-            content = await response.text()
-        
-        logger.debug(f"Downloaded HTML content: {len(content)} chars")
-        soup = BeautifulSoup(content, 'html.parser')
-        
-        # Remove script and style elements
-        for script in soup(["script", "style", "nav", "header", "footer", "aside"]):
-            script.decompose()
-        
-        # Try to find main content areas (common article selectors)
-        content_selectors = [
-            'article',
-            '[role="main"]',
-            '.content',
-            '.post-content',
-            '.entry-content',
-            '.article-content',
-            'main',
-            '.main-content'
-        ]
-        
-        content_text = ""
-        for selector in content_selectors:
-            content_elem = soup.select_one(selector)
-            if content_elem:
-                content_text = content_elem.get_text(separator=' ', strip=True)
-                break
-        
-        # Fallback to body if no main content found
-        if not content_text:
-            content_text = soup.body.get_text(separator=' ', strip=True) if soup.body else ""
-        
-        # Clean up whitespace and limit size
-        content_text = re.sub(r'\s+', ' ', content_text).strip()
-        result = content_text[:3000]
-        logger.info(f"BeautifulSoup successfully scraped {url}: {len(result)} chars extracted")
-        return result
-        
-    except Exception as e:
-        logger.warning(f"BeautifulSoup failed for {url}: {e}")
-        return ""
+        # Check for author field that might contain source
+        if hasattr(entry, 'author') and entry.author:
+            # Sometimes aggregators put the source in the author field
+            author = entry.author.lower()
+            # Look for common domain patterns in author field
+            import re
+            domain_match = re.search(r'([a-zA-Z0-9-]+\.[a-zA-Z]{2,})', author)
+            if domain_match:
+                return domain_match.group(1)
+    
+    return source
 
-async def scrape_with_firecrawl(url: str, firecrawl_app: Optional[FirecrawlApp] = None) -> str:
-    """Scrape content using Firecrawl API."""
-    if not firecrawl_app:
-        logger.debug("No Firecrawl app provided, returning empty string")
-        return ""
-    
-    logger.debug(f"Starting Firecrawl scraping for: {url}")
-    try:
-        # Use Firecrawl's scrape endpoint with free tier limits
-        response = firecrawl_app.scrape_url(
-            url=url,
-            params={
-                'formats': ['markdown', 'html'],
-                'includeTags': ['title', 'meta', 'article', 'main', 'content'],
-                'excludeTags': ['nav', 'footer', 'header', 'aside', 'script', 'style'],
-                'timeout': 10000,  # 10 seconds
-                'waitFor': 0,      # Don't wait for JS
-            }
-        )
-        
-        # Extract content from response
-        result = ""
-        if response and 'success' in response and response['success']:
-            data = response.get('data', {})
-            
-            # Prefer markdown content, fallback to cleaned text
-            if 'markdown' in data and data['markdown']:
-                result = data['markdown'][:3000]
-                logger.debug("Used Firecrawl markdown content")
-            elif 'content' in data and data['content']:
-                result = data['content'][:3000]
-                logger.debug("Used Firecrawl text content")
-            elif 'html' in data and data['html']:
-                # Clean HTML as fallback
-                soup = BeautifulSoup(data['html'], 'html.parser')
-                result = soup.get_text(separator=' ', strip=True)[:3000]
-                logger.debug("Used Firecrawl HTML content (cleaned)")
-        
-        if result:
-            logger.info(f"Firecrawl successfully scraped {url}: {len(result)} chars extracted")
-        else:
-            logger.warning(f"Firecrawl returned no usable content for {url}")
-        return result
-        
-    except Exception as e:
-        logger.warning(f"Firecrawl failed for {url}: {e}")
-        return ""
 
-def is_pdf_url(url: str) -> bool:
-    """Check if URL points to a PDF file."""
-    try:
-        parsed = urlparse(url.lower())
-        path = parsed.path.lower()
-        is_pdf = (path.endswith('.pdf') or 
-                 'pdf' in parsed.query.lower() or
-                 'content-type=application/pdf' in parsed.query.lower())
-        logger.debug(f"PDF check for {url}: {is_pdf}")
-        return is_pdf
-    except Exception as e:
-        logger.warning(f"Error checking if URL is PDF {url}: {e}")
-        return False
 
-async def follow_aggregator_link(session: aiohttp.ClientSession, url: str, timeout: int = 10) -> tuple[str, str]:
-    """Follow aggregator links to find the original article URL and source."""
-    logger.debug(f"Checking for aggregator links in: {url}")
-    try:
-        # Check if this is a known aggregator
-        parsed_url = urlparse(url)
-        domain = parsed_url.netloc.lower()
-        
-        if "takara.ai" in domain:
-            logger.info(f"Detected Takara aggregator, attempting to find original source")
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-            }
-            
-            async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=timeout)) as response:
-                if response.status != 200:
-                    logger.warning(f"Failed to fetch aggregator page: HTTP {response.status}")
-                    return url, domain_of(url)
-                    
-                content = await response.text()
-                soup = BeautifulSoup(content, 'html.parser')
-                
-                # Look for common patterns where aggregators link to original sources
-                original_link_selectors = [
-                    'a[href*="arxiv.org"]',  # arXiv papers
-                    'a[href*="github.com"]',  # GitHub links
-                    'a[href*="huggingface.co"]',  # HuggingFace
-                    'a[href*="doi.org"]',  # DOI links
-                    'a[href*="openreview.net"]',  # OpenReview
-                    'a:contains("Original")',  # Links with "Original" text
-                    'a:contains("Paper")',  # Links with "Paper" text
-                    'a:contains("Source")',  # Links with "Source" text
-                    '.original-link',  # Common class names
-                    '.source-link',
-                    '.paper-link'
-                ]
-                
-                for selector in original_link_selectors:
-                    try:
-                        link_elem = soup.select_one(selector)
-                        if link_elem and link_elem.get('href'):
-                            original_url = link_elem.get('href')
-                            # Resolve relative URLs
-                            if original_url.startswith('/'):
-                                original_url = f"https://{domain}{original_url}"
-                            elif not original_url.startswith('http'):
-                                original_url = f"https://{domain}/{original_url}"
-                            
-                            # Skip PDF files
-                            if is_pdf_url(original_url):
-                                logger.info(f"Skipping PDF file: {original_url}")
-                                continue
-                            
-                            original_domain = domain_of(original_url)
-                            # Don't use the same domain as the aggregator
-                            if original_domain != domain and original_domain:
-                                logger.info(f"Found original source: {original_url} (from {url})")
-                                return original_url, original_domain
-                    except Exception as e:
-                        logger.debug(f"Error processing selector {selector}: {e}")
-                        continue
-                
-                # If no obvious link found, try to extract from meta tags or structured data
-                # Look for canonical URLs or Open Graph URLs
-                meta_selectors = [
-                    'link[rel="canonical"]',
-                    'meta[property="og:url"]',
-                    'meta[name="citation_pdf_url"]'  # Academic papers
-                ]
-                
-                for selector in meta_selectors:
-                    try:
-                        meta_elem = soup.select_one(selector)
-                        if meta_elem:
-                            original_url = meta_elem.get('href') or meta_elem.get('content')
-                            if original_url and original_url != url:
-                                # Skip PDF files
-                                if is_pdf_url(original_url):
-                                    logger.info(f"Skipping PDF file from meta: {original_url}")
-                                    continue
-                                    
-                                original_domain = domain_of(original_url)
-                                if original_domain != domain and original_domain:
-                                    logger.info(f"Found original source via meta: {original_url} (from {url})")
-                                    return original_url, original_domain
-                    except Exception:
-                        continue
-        
-        logger.debug(f"No aggregator pattern matched for {url}, using original")
-        return url, domain_of(url)
-        
-    except Exception as e:
-        logger.warning(f"Failed to follow aggregator link {url}: {e}")
-        return url, domain_of(url)
-
-async def scrape_article_content(session: aiohttp.ClientSession, url: str, method: ScrapingMethod, firecrawl_app: Optional[FirecrawlApp] = None, timeout: int = 10) -> tuple[str, str, str]:
-    """Scrape article content and return (content, final_url, final_source)."""
-    logger.debug(f"Scraping content from {url} using method {method.value}")
-    
-    # First, try to follow aggregator links to find original sources
-    original_url, original_source = await follow_aggregator_link(session, url, timeout)
-    
-    # Use the original URL for scraping content
-    scraping_url = original_url
-    
-    if method == ScrapingMethod.FIRECRAWL and firecrawl_app:
-        content = await asyncio.get_event_loop().run_in_executor(
-            None, scrape_with_firecrawl, scraping_url, firecrawl_app
-        )
-        if content:
-            return content, original_url, original_source
-        # Fallback to newspaper if Firecrawl fails
-        method = ScrapingMethod.NEWSPAPER
-    
-    if method == ScrapingMethod.AUTO:
-        # Try newspaper first, then beautifulsoup
-        content = await scrape_with_newspaper(session, scraping_url, timeout)
-        if content:
-            return content, original_url, original_source
-        content = await scrape_with_beautifulsoup(session, scraping_url, timeout)
-        return content, original_url, original_source
-    
-    elif method == ScrapingMethod.NEWSPAPER:
-        content = await scrape_with_newspaper(session, scraping_url, timeout)
-        if content:
-            return content, original_url, original_source
-        # Fallback to beautifulsoup if newspaper fails
-        content = await scrape_with_beautifulsoup(session, scraping_url, timeout)
-        return content, original_url, original_source
-    
-    elif method == ScrapingMethod.BEAUTIFULSOUP:
-        content = await scrape_with_beautifulsoup(session, scraping_url, timeout)
-        return content, original_url, original_source
-    
-    return "", original_url, original_source
 
 async def fetch_feed_items(session: aiohttp.ClientSession, group: str, url: str, hours: int, scraping_method: ScrapingMethod, firecrawl_app: Optional[FirecrawlApp] = None) -> List[Dict[str, Any]]:
     """Fetch items from a single feed asynchronously."""
@@ -432,6 +157,7 @@ async def fetch_feed_items(session: aiohttp.ClientSession, group: str, url: str,
         # Process entries and scrape content concurrently
         scraping_tasks = []
         valid_entries = []
+        all_list = set()
         
         for e in d.entries:
             if not within_hours(e, hours):
@@ -474,6 +200,11 @@ async def fetch_feed_items(session: aiohttp.ClientSession, group: str, url: str,
             else:
                 source = extract_original_source(link, url, e)
             
+            if link in all_list:
+                logger.debug(f"Skipping duplicate link: {link}")
+                continue
+            
+            all_list.add(link)
             items.append({
                 "title": (e.get("title") or "").strip(),
                 "link": link,
@@ -491,6 +222,7 @@ async def fetch_feed_items(session: aiohttp.ClientSession, group: str, url: str,
         logger.error(f"Failed to fetch feed {url}: {e}")
     
     return items
+
 
 def is_quality_article(item: Dict[str, Any], min_length: int = 300) -> bool:
     """
@@ -589,6 +321,7 @@ def is_quality_article(item: Dict[str, Any], min_length: int = 300) -> bool:
     
     return is_quality
 
+
 async def fetch_all(feeds: Dict[str, list], hours: int, scraping_method: ScrapingMethod, section: Optional[str] = None) -> List[Dict[str, Any]]:
     logger.info(f"Starting feed processing with {hours}h lookback, method: {scraping_method.value}")
     
@@ -668,32 +401,22 @@ async def fetch_all(feeds: Dict[str, list], hours: int, scraping_method: Scrapin
     
     return quality_filtered
 
-async def render_outputs(items: List[Dict[str, Any]], out_dir: str, formats: list) -> None:
+
+async def render_outputs(items: List[Dict[str, Any]], section: str, out_dir: str) -> None:
     logger.info(f"Rendering outputs to {out_dir} in formats: {formats}")
     
     out_dir = out_dir.rstrip("/")
     os.makedirs(out_dir, exist_ok=True)
     ts = datetime.datetime.utcnow().strftime("%Y-%m-%d_%H-%M")
-    base = f"{out_dir}/digest-{ts}"
-    env = Environment(loader=FileSystemLoader(searchpath="app/templates"),
+    base = f"{out_dir}/{section}_digest_{ts}"
+    env = Environment(loader=FileSystemLoader(searchpath="labnotes/templates"),
                       autoescape=select_autoescape())
     
     # Prepare all outputs
     output_tasks = []
     
-    if "json" in formats:
-        json_content = json.dumps(items, indent=2, ensure_ascii=False)
-        output_tasks.append(write_file(base + ".json", json_content))
-    
-    if "md" in formats:
-        tpl = env.get_template("markdown.md.j2")
-        md = tpl.render(items=items, ts=ts)
-        output_tasks.append(write_file(base + ".md", md))
-    
-    if "txt" in formats:
-        tpl = env.get_template("text.txt.j2")
-        txt = tpl.render(items=items, ts=ts)
-        output_tasks.append(write_file(base + ".txt", txt))
+    json_content = json.dumps(items, indent=2, ensure_ascii=False)
+    output_tasks.append(write_file(base + ".json", json_content))
     
     # Write all files concurrently
     if output_tasks:
@@ -701,6 +424,7 @@ async def render_outputs(items: List[Dict[str, Any]], out_dir: str, formats: lis
         logger.info(f"Successfully wrote {len(output_tasks)} output files")
     else:
         logger.warning("No output formats specified")
+
 
 async def write_file(filepath: str, content: str) -> None:
     """Write content to file asynchronously."""
@@ -712,14 +436,14 @@ async def write_file(filepath: str, content: str) -> None:
         logger.error(f"Failed to write file {filepath}: {e}")
         raise
 
-async def main():
+
+async def main_async():
     p = argparse.ArgumentParser(description="AI Daily Digest (async)")
-    p.add_argument("--feeds", default="app/feeds.yaml", help="YAML file with feed groups")
-    p.add_argument("--keywords", default="app/keywords.json", help="JSON file with keyword scoring")
+    p.add_argument("--feeds", default="labnotes/data/feeds.yaml", help="YAML file with feed groups")
+    p.add_argument("--keywords", default="labnotes/data/keywords.json", help="JSON file with keyword scoring")
     p.add_argument("--hours", type=int, default=24, help="lookback window in hours")
     p.add_argument("--top", type=int, default=3, help="top N items to keep")
     p.add_argument("--out", default="./out", help="output directory")
-    p.add_argument("--format", default="json", help="comma-separated: md,json,txt")
     p.add_argument("--section", help="process only one section/group from feeds (e.g., 'AI Research & Models')")
     p.add_argument("--scraper", choices=['newspaper', 'beautifulsoup', 'firecrawl', 'auto'], 
                    default='newspaper', help="Web scraping method (default: newspaper)")
@@ -727,7 +451,7 @@ async def main():
                    default='INFO', help="Set the logging level (default: INFO)")
     args = p.parse_args()
 
-    # Setup logging with the specified level
+    # Setup logging with the specified level using external module
     setup_logging(args.log_level)
     
     logger.info("Starting AI Daily Digest")
@@ -757,15 +481,28 @@ async def main():
     
     logger.info(f"Selected top {len(top)} items (scores: {[item['_score'] for item in top]})")
 
-    fmts = [x.strip() for x in args.format.split(",") if x.strip()]
-    await render_outputs(top, args.out, fmts)
+    await render_outputs(top, args.section, args.out)
     
     logger.info(f"Digest generation complete! Wrote digest with {len(top)} items to {args.out}")
     return 0
 
+
+def main():
+    """Synchronous CLI entry point wrapper for the async main function."""
+    try:
+        exit_code = asyncio.run(main_async())
+        sys.exit(exit_code)
+    except KeyboardInterrupt:
+        logger.info("Process interrupted by user")
+        sys.exit(130)
+    except Exception as e:
+        logger.error(f"Unexpected error: {e}")
+        sys.exit(1)
+
+
 if __name__ == "__main__":
     try:
-        exit_code = asyncio.run(main())
+        exit_code = asyncio.run(main_async())
         sys.exit(exit_code)
     except KeyboardInterrupt:
         logger.info("Process interrupted by user")

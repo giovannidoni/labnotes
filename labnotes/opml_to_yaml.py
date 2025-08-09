@@ -1,7 +1,3 @@
-#!/usr/bin/env python3
-"""
-Convert OPML to feeds.yaml structure.
-"""
 import argparse, xml.etree.ElementTree as ET, yaml
 
 def parse_opml(path):
@@ -20,15 +16,19 @@ def parse_opml(path):
             groups[title] = urls
     return groups
 
+def convert_opml_to_yaml(opml_path, output_path):
+    """Convert OPML file to YAML format."""
+    data = parse_opml(opml_path)
+    with open(output_path, 'w', encoding='utf-8') as f:
+        yaml.dump(data, f, sort_keys=False)
+    print(f"Wrote {output_path} with {sum(len(v) for v in data.values())} feeds.")
+
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--opml", required=True)
     p.add_argument("--out", required=True)
     args = p.parse_args()
-    data = parse_opml(args.opml)
-    with open(args.out, 'w', encoding='utf-8') as f:
-        yaml.dump(data, f, sort_keys=False)
-    print(f"Wrote {args.out} with {sum(len(v) for v in data.values())} feeds.")
+    convert_opml_to_yaml(args.opml, args.out)
 
 if __name__ == "__main__":
     main()

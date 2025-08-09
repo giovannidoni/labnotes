@@ -1,70 +1,199 @@
-# AI Daily Digest (uv-native)
+# Labnotes - AI Daily Digest
 
-Python-only daily AI digest. Pulls curated RSS/Atom feeds, filters last 24h, dedupes, scores for relevance, scrapes full article content, and writes a ranked digest as **Markdown and JSON**.
+Python-based AI digest system that fetches RSS/Atom feeds, filters articles, scores for relevance, scrapes full content, and outputs ranked digests. Includes smart deduplication using embeddings to remove similar articles.
 
-## Quick start (with `uv`)
+## Installation
+
 ```bash
-# Install deps into a virtual env
-uv sync
+# Install the package in editable mode
+pip install -e .
 
-# Run with defaults (24h window, top 3 items, outputs to ./out, newspaper3k scraping)
-uv run python app/digest.py
+# This makes the labnotes command available system-wide
+```
 
-# Customise
-uv run python app/digest.py --hours 24 --top 5 --format md,json,txt --out ./out
+## Quick Start
+
+### Generate a Digest
+
+```bash
+# Basic usage - generates digest with default settings (24h lookback, top 3 items)
+labnotes
+
+# Customize parameters
+labnotes --hours 48 --top 5 --format md,json,txt --out ./output
 
 # Process only one section of feeds
-uv run python app/digest.py --section "AI Research & Models"
+labnotes --section "AI Research & Models"
 
-# Choose scraping method
-uv run python app/digest.py --scraper newspaper    # Default: best for articles
-uv run python app/digest.py --scraper firecrawl    # Premium: requires API key  
-uv run python app/digest.py --scraper beautifulsoup # Fallback: basic scraping
-uv run python app/digest.py --scraper auto         # Smart: tries newspaper then beautifulsoup
+# Use different embedding models for scoring
+labnotes --model text-embedding-3-small  # OpenAI (requires OPENAI_API_KEY)
+labnotes --model all-MiniLM-L6-v2        # Local sentence-transformers (default)
+```
+
+### Deduplicate Similar Articles
+
+After generating a digest, you can remove similar articles using embedding-based similarity:
+
+```bash
+# Basic deduplication (keeps most recent of similar articles)
+labnotes-dedup out/digest-2025-08-09_18-03.json
+
+# Keep highest scoring articles instead of most recent
+labnotes-dedup digest.json --prefer-score
+
+# Adjust similarity threshold (0-1, higher = more strict)
+labnotes-dedup digest.json --threshold 0.9
+
+# Use OpenAI embeddings for better similarity detection
+labnotes-dedup digest.json --model text-embedding-3-small
+
+# Custom output file
+labnotes-dedup digest.json -o clean_digest.json
+```
+
+## Commands
+
+- **`labnotes`** - Generate digest from RSS/Atom feeds
+- **`labnotes-dedup`** - Remove similar articles from digest output
+
+## Configuration Files
+
+### Feeds Configuration
+Feeds are configured in `labnotes/data/feeds.yaml`:
+```yaml
+AI Research & Models:
+  - https://arxiv.org/rss/cs.AI
+  - https://arxiv.org/rss/cs.LG
+  
+Tech News:
+  - https://feeds.feedburner.com/TechCrunch
+  - https://rss.cnn.com/rss/edition.rss
+```
+
+Convert OPML to YAML:
+```bash
+python -m labnotes.opml_to_yaml feeds.opml -o labnotes/data/feeds.yaml
+```
+
+### Keywords Configuration
+Scoring keywords in `labnotes/data/keywords.json`:
+```json
+{
+  "must": ["AI", "machine learning", "LLM"],
+  "nice": ["research", "breakthrough", "model"],
+  "source_weight": {
+    "plus": ["arxiv.org", "nature.com"],
+    "minus": ["clickbait.com"]
+  }
+}
 ```
 
 ## Web Scraping Options
 
-### 1. Newspaper3k (Default - Recommended)
+The system supports multiple scraping methods that are automatically selected:
+
+### 1. Newspaper3k (Default)
 - **Best for**: News articles, blog posts, most content sites
-- **Pros**: Designed specifically for article extraction, handles many edge cases
-- **Cons**: May struggle with very modern JavaScript-heavy sites
+- **Pros**: Designed for article extraction, handles many edge cases
 - **Setup**: No additional setup required
 
-### 2. Firecrawl (Premium Option)
+### 2. OpenAI Embeddings
+- **Best for**: High-quality similarity detection and deduplication
+- **Models**: `text-embedding-3-small`, `text-embedding-3-large`, `text-embedding-ada-002`
+- **Setup**: Set `OPENAI_API_KEY` environment variable
+- **Usage**: Automatically detected by model name
+
+### 3. Firecrawl (Premium)
 - **Best for**: JavaScript-heavy sites, maximum content quality
-- **Pros**: Handles dynamic content, provides markdown formatting, very clean extraction
-- **Cons**: Requires API key, 500 requests/month free limit
-- **Setup**: 
-  ```bash
-  export FIRECRAWL_API_KEY=your_api_key_here
-  ```
+- **Setup**: Set `FIRECRAWL_API_KEY` environment variable
+- **Usage**: Add `--scraper firecrawl` to labnotes command
 
-### 3. BeautifulSoup (Fallback)
-- **Best for**: Simple HTML pages, debugging
-- **Pros**: Always works, no external dependencies
-- **Cons**: Gets mixed content (ads, navigation), requires manual cleaning
-- **Setup**: No additional setup required
-
-### 4. Auto (Smart Fallback)
-- **Best for**: Maximum reliability
-- **Behavior**: Tries newspaper3k first, falls back to BeautifulSoup if it fails
-- **Setup**: No additional setup required
+### 4. Sentence Transformers (Local)
+- **Best for**: Privacy-focused embedding generation
+- **Models**: `all-MiniLM-L6-v2`, `all-mpnet-base-v2`, etc.
+- **Setup**: No additional setup required (downloads models automatically)
 
 ## Features
-- **RSS/Atom parsing**: Fetches from curated feeds
+
+### Core Functionality
+- **RSS/Atom parsing**: Fetches from curated feeds with async processing
 - **Smart web scraping**: Multiple scraping methods with intelligent fallbacks
-- **Async processing**: Concurrent feed fetching and content scraping
-- **Time filtering**: Configurable lookback window
-- **Deduplication**: Removes duplicate articles
-- **Relevance scoring**: Uses keyword matching and source weighting
+- **Time filtering**: Configurable lookback window (hours, days)
+- **Content quality filtering**: Removes low-quality content automatically
+- **Relevance scoring**: Keyword matching and source weighting
 - **Multiple outputs**: Markdown, JSON, and plain text formats
 
-## Feeds
-- Maintained in `app/feeds.yaml`. You can also convert an OPML file via:
+### Advanced Features
+- **Embedding-based deduplication**: Remove similar articles using AI embeddings
+- **Provider auto-detection**: Automatically chooses OpenAI vs local embeddings based on model name
+- **Section-based processing**: Process specific feed categories
+- **Concurrent processing**: Async fetching and content scraping for speed
+
+## Environment Variables
+
 ```bash
-uv run python app/opml_to_yaml.py --opml feeds.opml --out app/feeds.yaml
+# Optional: For OpenAI embeddings (better similarity detection)
+export OPENAI_API_KEY=your_openai_api_key
+
+# Optional: For premium web scraping
+export FIRECRAWL_API_KEY=your_firecrawl_api_key
 ```
 
-## GitHub Actions (daily)
-A ready-to-use workflow is included at `.github/workflows/daily.yml`.
+## Examples
+
+### Complete Workflow
+
+```bash
+# 1. Generate initial digest
+labnotes --hours 24 --top 10 --format json --out ./output
+
+# 2. Remove similar articles
+labnotes-dedup ./output/digest-2025-08-09_18-03.json --threshold 0.85
+
+# 3. Generate final markdown output
+labnotes --hours 24 --top 5 --format md --out ./final
+```
+
+### Advanced Usage
+
+```bash
+# High-quality processing with OpenAI
+export OPENAI_API_KEY=your_key
+labnotes --model text-embedding-3-small --scraper firecrawl
+labnotes-dedup digest.json --model text-embedding-3-small --threshold 0.9
+
+# Privacy-focused local processing
+labnotes --model all-MiniLM-L6-v2
+labnotes-dedup digest.json --model all-mpnet-base-v2
+```
+
+## File Structure
+
+```
+labnotes/
+├── __init__.py
+├── digest.py          # Main digest generation
+├── deduplicate.py     # Similarity-based deduplication
+├── embeddings.py      # Embedding generation (OpenAI + local)
+├── similarity.py      # Similarity detection algorithms
+├── scraping.py        # Web content scraping
+├── utils.py           # Utilities and logging
+├── opml_to_yaml.py    # OPML conversion utility
+├── data/
+│   ├── feeds.yaml     # RSS/Atom feed configuration
+│   └── keywords.json  # Scoring keywords and weights
+└── templates/
+    ├── markdown.md.j2 # Markdown output template
+    └── text.txt.j2    # Plain text output template
+```
+
+## Development
+
+```bash
+# Install in development mode
+pip install -e .
+
+# Run with debug logging
+labnotes --log-level DEBUG
+labnotes-dedup digest.json --log-level DEBUG
+```

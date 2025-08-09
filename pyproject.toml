@@ -15,7 +15,41 @@ dependencies = [
   "firecrawl-py>=0.0.16",
   "newspaper3k>=0.2.8",
   "lxml-html-clean>=0.1.0",
+  "numpy>=2.2.6",
+  "sentence-transformers>=5.1.0",
+  "openai>=1.99.6",
 ]
 
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[[tool.uv.index]]
+url = "https://pypi.org/simple"   # PyPI
+default = true          
+
 [tool.uv]
-# Prefer wheels when available
+package = true
+environments = [
+    "sys_platform == 'darwin'",
+    "sys_platform == 'linux'",
+]
+
+[tool.euv]
+# Example configuration for euv (edit as needed)
+include = ["src/backend"]
+exclude = ["tests"]
+
+[project.scripts]
+labnotes = "labnotes.digest:main"
+labnotes-dedup = "labnotes.deduplicate:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["labnotes*"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py38"
+select = ["E", "F", "W"]
+ignore = ["E501"]
