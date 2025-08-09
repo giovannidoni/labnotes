@@ -1,0 +1,18 @@
+[project]
+name = "labnotes"
+version = "0.1.0"
+description = "Daily AI digest: fetch RSS/Atom, score, rank, and output Markdown/JSON."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "feedparser==6.0.11",
+  "jinja2>=3.1.3",
+  "requests>=2.31.0",
+  "pyyaml>=6.0.1",
+  "beautifulsoup4>=4.12.0",
+  "aiohttp>=3.9.0",
+  "aiofiles>=23.2.0",
+]
+
+[tool.uv]
+# Prefer wheels when available

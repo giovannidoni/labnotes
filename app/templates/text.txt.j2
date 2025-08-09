@@ -1,0 +1,11 @@
+AI Daily Digest — {{ ts }}
+{% if items|length == 0 -%}
+No items.
+{%- else -%}
+{%- for it in items %}
+{{ loop.index }}. {{ it.title }} ({{ it.source }}) [score {{ it._score }} | group {{ it.group }}{% if it.date %} | date {{ it.date }}{% endif %}]
+{{ it.summary }}
+Link: {{ it.link }}
+
+{%- endfor -%}
+{%- endif -%}

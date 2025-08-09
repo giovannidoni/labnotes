@@ -1,0 +1,17 @@
+# AI Daily Digest — {{ ts }}
+
+{% if items|length == 0 %}
+_No high-signal items in the period._
+{% else %}
+{% for it in items %}
+## {{ loop.index }}. {{ it.title }}
+**Source:** {{ it.source }} | **Score:** {{ it._score }} | **Group:** {{ it.group }}{% if it.date %} | **Date:** {{ it.date }}{% endif %}
+
+{{ it.summary }}
+
+🔗 {{ it.link }}
+{% if not loop.last %}
+---
+{% endif %}
+{% endfor %}
+{% endif %}

@@ -1,0 +1,42 @@
+{
+  "must": [
+    "ai",
+    "model",
+    "inference",
+    "multimodal",
+    "agent",
+    "rag",
+    "embedding",
+    "vector",
+    "quantization",
+    "vllm",
+    "kserve",
+    "langchain",
+    "llamaindex"
+  ],
+  "nice": [
+    "mcp",
+    "document processing",
+    "idp",
+    "retrieval",
+    "safety",
+    "latency",
+    "throughput",
+    "benchmark",
+    "fp8",
+    "moe",
+    "open-source",
+    "deployment"
+  ],
+  "source_weight": {
+    "plus": [
+      "arxiv.org",
+      "huggingface.co",
+      "github.com",
+      "paperswithcode.com"
+    ],
+    "minus": [
+      "techcrunch.com"
+    ]
+  }
+}
