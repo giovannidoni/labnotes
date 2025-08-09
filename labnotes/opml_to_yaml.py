@@ -24,15 +24,3 @@ def convert_opml_to_yaml(opml_path, output_path):
     with open(output_path, "w", encoding="utf-8") as f:
         yaml.dump(data, f, sort_keys=False)
     print(f"Wrote {output_path} with {sum(len(v) for v in data.values())} feeds.")
-
-
-def main():
-    p = argparse.ArgumentParser()
-    p.add_argument("--opml", required=True)
-    p.add_argument("--out", required=True)
-    args = p.parse_args()
-    convert_opml_to_yaml(args.opml, args.out)
-
-
-if __name__ == "__main__":
-    main()

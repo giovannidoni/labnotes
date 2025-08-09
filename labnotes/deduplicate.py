@@ -19,6 +19,16 @@ from labnotes.similarity import remove_similar_items, parse_date_for_comparison
 logger = logging.getLogger(__name__)
 
 
+def find_most_recent_file(directory: Path, pattern: str = "*.json") -> Path:
+    """Find the most recent file matching the pattern in the given directory."""
+    files = list(directory.glob(pattern))
+    if not files:
+        raise FileNotFoundError(f"No files matching '{pattern}' found in directory: {directory}")
+    
+    # Return the file with the most recent modification time
+    return max(files, key=lambda f: f.stat().st_mtime)
+
+
 def load_digest(filepath: str) -> List[Dict[str, Any]]:
     """Load digest JSON file."""
     try:
@@ -159,7 +169,9 @@ async def deduplicate_digest(
 async def main_async():
     """Main async function."""
     parser = argparse.ArgumentParser(description="Deduplicate digest items based on similarity")
-    parser.add_argument("input", help="Input JSON digest file")
+    parser.add_argument("--input", required=True, help="Input JSON digest path")
+    parser.add_argument("--section", required=True, help="process only one section/group from feeds (e.g., 'ai_research_and_models')")
+
     parser.add_argument("-t", "--threshold", type=float, default=0.5, help="Similarity threshold (0-1, default: 0.5)")
     parser.add_argument(
         "--prefer-score", action="store_true", help="Prefer high score over recency (default: prefer recent)"
@@ -183,15 +195,23 @@ async def main_async():
     # Setup logging
     setup_logging(args.log_level)
 
-    # Determine output path
-    input_path = Path(args.input)
-    output_path = str(input_path).replace("digest", "deduped")
+    # Determine input and output paths
+    input_path = Path(args.input) / args.section
+    
+    # Find the most recent JSON file in the input path
+    try:
+        input_file = find_most_recent_file(input_path)
+    except FileNotFoundError as e:
+        logger.info("No digest files found, please run the digest command first.")
+        return 0
 
-    logger.info(f"Input: {args.input}, Output: {output_path}")
+    output_file = str(input_file).replace("digest", "deduped")
+    
+    logger.info(f"Input: {input_file}, Output: {output_file}")
 
     try:
         # Load digest
-        items = load_digest(args.input)
+        items = load_digest(str(input_file))
 
         if not items:
             logger.warning("No items to process")
@@ -207,7 +227,7 @@ async def main_async():
         )
 
         # Save results
-        save_deduplicated(deduplicated, output_path)
+        save_deduplicated(deduplicated, output_file)
 
         # Report statistics
         removed_count = len(items) - len(deduplicated)

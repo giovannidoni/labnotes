@@ -2,6 +2,7 @@
 import argparse, datetime, json, re, sys, time, asyncio, os, logging
 from urllib.parse import urlparse
 from typing import List, Dict, Any, Optional
+from pathlib import Path
 
 import feedparser
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -322,11 +323,11 @@ def is_quality_article(item: Dict[str, Any], min_length: int = 300) -> bool:
 
     # Quality scoring heuristics
     quality_indicators = {
-        "sufficient_sentences": sentence_count >= 3,
+        "sufficient_sentences": sentence_count >= 10,
         "has_paragraphs": paragraph_count >= 2,
         "low_link_density": link_density < 0.3,  # Less than 30% links
         "reasonable_length": len(text) >= min_length,
-        "word_variety": len(word_freq) > 20,  # At least 20 unique meaningful words
+        "word_variety": len(word_freq) > 50,  # At least 20 unique meaningful words
         "low_repetition": repetition_score < 0.3,  # No word appears more than 30% of the time
         "sentence_length": word_count / max(sentence_count, 1) > 5,  # Average 5+ words per sentence
     }
@@ -442,7 +443,6 @@ async def fetch_all(
 
 
 async def render_outputs(items: List[Dict[str, Any]], section: str, out_dir: str) -> None:
-    logger.info(f"Rendering outputs to {out_dir} in formats: {formats}")
 
     out_dir = out_dir.rstrip("/")
     os.makedirs(out_dir, exist_ok=True)
@@ -476,26 +476,26 @@ async def write_file(filepath: str, content: str) -> None:
 
 
 async def main_async():
-    p = argparse.ArgumentParser(description="AI Daily Digest (async)")
-    p.add_argument("--feeds", default="labnotes/data/feeds.yaml", help="YAML file with feed groups")
-    p.add_argument("--keywords", default="labnotes/data/keywords.json", help="JSON file with keyword scoring")
-    p.add_argument("--hours", type=int, default=24, help="lookback window in hours")
-    p.add_argument("--top", type=int, default=3, help="top N items to keep")
-    p.add_argument("--out", default="./out", help="output directory")
-    p.add_argument("--section", help="process only one section/group from feeds (e.g., 'AI Research & Models')")
-    p.add_argument(
+    parser = argparse.ArgumentParser(description="AI Daily Digest (async)")
+    parser.add_argument("--feeds", default="labnotes/data/feeds.yaml", help="YAML file with feed groups")
+    parser.add_argument("--keywords", default="labnotes/data/keywords.json", help="JSON file with keyword scoring")
+    parser.add_argument("--hours", type=int, default=24, help="lookback window in hours")
+    parser.add_argument("--top", type=int, default=50, help="top N items to keep")
+    parser.add_argument("--out", default="./out", help="output directory")
+    parser.add_argument("--section", help="process only one section/group from feeds (e.g., 'ai_research_and_models')")
+    parser.add_argument(
         "--scraper",
         choices=["newspaper", "beautifulsoup", "firecrawl", "auto"],
         default="newspaper",
         help="Web scraping method (default: newspaper)",
     )
-    p.add_argument(
+    parser.add_argument(
         "--log-level",
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
         default="INFO",
         help="Set the logging level (default: INFO)",
     )
-    args = p.parse_args()
+    args = parser.parse_args()
 
     # Setup logging with the specified level using external module
     setup_logging(args.log_level)
@@ -523,14 +523,15 @@ async def main_async():
         scores = score_item_dual(it, kw)
 
         # Store detailed scores for both audiences
-        it["_scores"] = scores
+        # it["_scores"] = scores
 
         # Store individual scores for easy access
         it["_score_engineers"] = scores.get("engineers", {}).get("score", 0)
         it["_score_managers"] = scores.get("managers", {}).get("score", 0)
+        it["_score"] = it["_score_engineers"] + it["_score_managers"] # Combined score for sorting
 
         # Keep legacy _score field as engineers score for backward compatibility
-        it["_score"] = it["_score_engineers"]
+        # it["_score"] = it["_score_engineers"]
 
     # Sort by combined score (engineers + managers)
     items.sort(key=lambda x: x["_score_engineers"] + x["_score_managers"], reverse=True)
@@ -544,9 +545,11 @@ async def main_async():
     logger.info(f"  Managers scores: {mgr_scores}")
     logger.info(f"  Combined scores: {[e + m for e, m in zip(eng_scores, mgr_scores)]})")
 
-    await render_outputs(top, args.section, args.out)
+    out_dir = Path(args.out) / args.section if getattr(args, "section") else Path(args.out)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    await render_outputs(top, args.section, str(out_dir))
 
-    logger.info(f"Digest generation complete! Wrote digest with {len(top)} items to {args.out}")
+    logger.info(f"Digest generation complete! Wrote digest with {len(top)} items to {out_dir}")
     return 0
 
 

@@ -36,20 +36,20 @@ After generating a digest, you can remove similar articles using embedding-based
 
 ```bash
 # Basic deduplication (keeps most recent of similar articles)
-labnotes-dedup out/digest-2025-08-09_18-03.json
+# Processes the most recent digest file in the specified section directory
+labnotes-dedup /path/to/digest/output --section ai_research_and_models
 
 # Keep highest scoring articles instead of most recent
-labnotes-dedup digest.json --prefer-score
+labnotes-dedup /path/to/digest/output --section tech_news --prefer-score
 
 # Adjust similarity threshold (0-1, higher = more strict)
-labnotes-dedup digest.json --threshold 0.9
+labnotes-dedup /path/to/digest/output --section ai_research_and_models --threshold 0.9
 
 # Use OpenAI embeddings for better similarity detection
-labnotes-dedup digest.json --model text-embedding-3-small
-
-# Custom output file
-labnotes-dedup digest.json -o clean_digest.json
+labnotes-dedup /path/to/digest/output --section ai_research_and_models --model text-embedding-3-small
 ```
+
+**Output Enhancement**: The deduplication process now automatically saves embeddings as an additional field in the output JSON. Each deduplicated item will include an `embedding` field containing the vector representation used for similarity detection, enabling further analysis or custom similarity comparisons.
 
 ## Commands
 
