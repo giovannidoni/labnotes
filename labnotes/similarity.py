@@ -74,14 +74,17 @@ async def remove_similar_items(
     # Generate embeddings for all items
     embeddings = await embedding_service.generate_embeddings_batch(items)
 
-    # Filter out items without embeddings
+    # Filter out items without embeddings and save embeddings to items
     valid_items = []
     valid_embeddings = []
     no_embedding_count = 0
 
     for item, embedding in zip(items, embeddings):
         if embedding is not None:
-            valid_items.append(item)
+            # Create a copy of the item and add the embedding
+            item_with_embedding = item.copy()
+            item_with_embedding['embedding'] = embedding.tolist()  # Convert numpy array to list for JSON serialization
+            valid_items.append(item_with_embedding)
             valid_embeddings.append(embedding)
         else:
             no_embedding_count += 1
@@ -91,7 +94,16 @@ async def remove_similar_items(
 
     if len(valid_items) <= 1:
         logger.info("Not enough items with embeddings for similarity comparison")
-        return items
+        # Return items with embeddings preserved
+        final_items = []
+        for item, embedding in zip(items, embeddings):
+            if embedding is not None:
+                item_with_embedding = item.copy()
+                item_with_embedding['embedding'] = embedding.tolist()
+                final_items.append(item_with_embedding)
+            else:
+                final_items.append(item)
+        return final_items
 
     logger.info(f"Comparing {len(valid_items)} items with valid embeddings")
 
@@ -112,8 +124,16 @@ async def remove_similar_items(
 
     if not similar_pairs:
         logger.info("No similar items found")
-        # Return original items (including those without embeddings)
-        return items
+        # Return items with embeddings preserved
+        final_items = []
+        for item, embedding in zip(items, embeddings):
+            if embedding is not None:
+                item_with_embedding = item.copy()
+                item_with_embedding['embedding'] = embedding.tolist()
+                final_items.append(item_with_embedding)
+            else:
+                final_items.append(item)
+        return final_items
 
     logger.info(f"Found {len(similar_pairs)} similar item pairs")
 
