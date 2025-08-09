@@ -492,21 +492,102 @@ async def fetch_feed_items(session: aiohttp.ClientSession, group: str, url: str,
     
     return items
 
-def has_sufficient_content(item: Dict[str, Any], min_length: int = 300) -> bool:
-    """Check if item has sufficient content in either content or full_content field."""
+def is_quality_article(item: Dict[str, Any], min_length: int = 300) -> bool:
+    """
+    Check if item contains quality article content rather than spam or link collections.
+    
+    Uses multiple heuristics to determine content quality:
+    - Minimum character count
+    - Sentence structure and paragraph detection
+    - Link density analysis
+    - Word variety and repetition patterns
+    - Content coherence indicators
+    """
     content = item.get("content", "") or ""
     full_content = item.get("full_content", "") or ""
     
-    content_length = len(content.strip())
-    full_content_length = len(full_content.strip())
+    # Use the longer of the two content fields
+    text = full_content if len(full_content) > len(content) else content
+    text = text.strip()
     
-    has_sufficient = content_length >= min_length or full_content_length >= min_length
+    if len(text) < min_length:
+        logger.debug(f"Content too short for '{item.get('title', 'Unknown')[:50]}...': {len(text)} < {min_length}")
+        return False
     
-    logger.debug(f"Content length check for '{item.get('title', 'Unknown')[:50]}...': "
-                f"content={content_length}, full_content={full_content_length}, "
-                f"min_required={min_length}, sufficient={has_sufficient}")
+    # Count sentences (basic heuristic: periods, exclamation marks, question marks)
+    import re
+    sentences = re.split(r'[.!?]+', text)
+    sentence_count = len([s for s in sentences if len(s.strip()) > 10])
     
-    return has_sufficient
+    # Count paragraphs (double newlines or substantial line breaks)
+    paragraphs = re.split(r'\n\s*\n', text)
+    paragraph_count = len([p for p in paragraphs if len(p.strip()) > 50])
+    
+    # Count URLs and links
+    url_pattern = r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
+    urls = re.findall(url_pattern, text)
+    url_count = len(urls)
+    
+    # Count words
+    words = text.split()
+    word_count = len(words)
+    
+    if word_count == 0:
+        logger.debug(f"No words found in content for '{item.get('title', 'Unknown')[:50]}...'")
+        return False
+    
+    # Calculate link density (percentage of text that is URLs)
+    url_chars = sum(len(url) for url in urls)
+    link_density = url_chars / len(text) if len(text) > 0 else 0
+    
+    # Check for excessive repetition (spam indicator)
+    word_freq = {}
+    for word in words:
+        word_lower = word.lower().strip('.,!?;:"()[]{}')
+        if len(word_lower) > 3:  # Only count meaningful words
+            word_freq[word_lower] = word_freq.get(word_lower, 0) + 1
+    
+    # Calculate repetition score
+    if word_freq:
+        max_freq = max(word_freq.values())
+        unique_words = len(word_freq)
+        repetition_score = max_freq / unique_words if unique_words > 0 else 1
+    else:
+        repetition_score = 1
+    
+    # Quality scoring heuristics
+    quality_indicators = {
+        'sufficient_sentences': sentence_count >= 3,
+        'has_paragraphs': paragraph_count >= 2,
+        'low_link_density': link_density < 0.3,  # Less than 30% links
+        'reasonable_length': len(text) >= min_length,
+        'word_variety': len(word_freq) > 20,  # At least 20 unique meaningful words
+        'low_repetition': repetition_score < 0.3,  # No word appears more than 30% of the time
+        'sentence_length': word_count / max(sentence_count, 1) > 5,  # Average 5+ words per sentence
+    }
+    
+    # Calculate quality score
+    quality_score = sum(quality_indicators.values())
+    total_indicators = len(quality_indicators)
+    
+    # Need at least 70% of quality indicators to pass
+    is_quality = quality_score >= (total_indicators * 0.7)
+    
+    # Special handling for very short content - be more strict
+    if len(text) < min_length * 2:  # Less than 2x minimum
+        is_quality = is_quality and quality_score >= (total_indicators * 0.8)
+    
+    # Log detailed analysis for debugging
+    logger.debug(f"Quality analysis for '{item.get('title', 'Unknown')[:50]}...': "
+                f"length={len(text)}, sentences={sentence_count}, paragraphs={paragraph_count}, "
+                f"urls={url_count}, link_density={link_density:.2f}, repetition={repetition_score:.2f}, "
+                f"unique_words={len(word_freq)}, quality_score={quality_score}/{total_indicators}, "
+                f"is_quality={is_quality}")
+    
+    if not is_quality:
+        logger.debug(f"Quality indicators failed: {[k for k, v in quality_indicators.items() if not v]}")
+    
+    return is_quality
 
 async def fetch_all(feeds: Dict[str, list], hours: int, scraping_method: ScrapingMethod, section: Optional[str] = None) -> List[Dict[str, Any]]:
     logger.info(f"Starting feed processing with {hours}h lookback, method: {scraping_method.value}")
@@ -573,19 +654,19 @@ async def fetch_all(feeds: Dict[str, list], hours: int, scraping_method: Scrapin
     
     logger.info(f"Deduplication complete: {len(deduped)} unique items, {duplicates} duplicates removed")
     
-    # Filter items with insufficient content
-    content_filtered = []
-    insufficient_content = 0
+    # Filter items with insufficient content quality
+    quality_filtered = []
+    low_quality = 0
     for item in deduped:
-        if has_sufficient_content(item):
-            content_filtered.append(item)
+        if is_quality_article(item):
+            quality_filtered.append(item)
         else:
-            insufficient_content += 1
+            low_quality += 1
     
-    logger.info(f"Content filtering complete: {len(content_filtered)} items with sufficient content, "
-               f"{insufficient_content} items filtered out for insufficient content")
+    logger.info(f"Quality filtering complete: {len(quality_filtered)} quality articles retained, "
+               f"{low_quality} items filtered out for low content quality")
     
-    return content_filtered
+    return quality_filtered
 
 async def render_outputs(items: List[Dict[str, Any]], out_dir: str, formats: list) -> None:
     logger.info(f"Rendering outputs to {out_dir} in formats: {formats}")
