@@ -87,7 +87,7 @@ jobs:
           # Check if file exists
           if [ -f "./out/summarised_results.json" ]; then
             aws s3 cp ./out/summarised_results.json s3://my-labnotes-storage/$DATE_PATH/summarised_results.json
-            echo "s3_file_path=s3://my-labnotes-storage/$DATE_PATH/summarised_results.json" >> $GITHUB_OUTPUT
+            echo "s3_file_path=s3://labnotes-storage/$DATE_PATH/summarised_results.json" >> $GITHUB_OUTPUT
             echo "publish_success=true" >> $GITHUB_OUTPUT
           else
             echo "No collect files found in ./out/"
@@ -103,4 +103,4 @@ jobs:
           curl -X POST "https://backslashn.app.n8n.cloud/webhook-test/6af37fb4-0435-4e58-9f8b-3cd0f06b88d7" \
             -H "x-api-key: $WEBHOOK_TOKEN" \
             -H "Content-Type: application/json" \
-            -d '{"bucketName": "s3://my-labnotes-storage", "fileName": "${{ steps.publish.outputs.s3_file_path }}"'
+            -d '{"bucketName": "s3://labnotes-storage", "fileName": "${{ steps.publish.outputs.s3_file_path }}"'
