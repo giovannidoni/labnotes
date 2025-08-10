@@ -60,7 +60,7 @@ class ResultSummarisationService:
         title = item.get("title", "") or ""
         summary = item.get("summary", "") or ""
         link = item.get("link", "") or ""
-        assert litem.get("index")
+        assert str(item.get("index"))
         index = item.get("index")
 
         text = f"Index: {index}\nTitle: {title}\nLink: {link}\nSummary: {summary}"
@@ -80,7 +80,7 @@ class ResultSummarisationService:
     def _get_prompt_input(self, section_items: Dict[str, List[Dict[str, Any]]]) -> str:
         """Extract text content from item for summarisation."""
         full_prompt = ""
-        for i, section, items in section_items.items():
+        for section, items in section_items.items():
             section_header = f"***Section: {section}***\n"
             if section == section:
                 full_prompt += self._prompt_for_section(items, section_header)
