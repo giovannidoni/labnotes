@@ -98,7 +98,7 @@ jobs:
 
       - name: Trigger hook
         env:
-          WEBHOOK_API_KEY: ${{ secrets.WEBHOOK_TOKEN }}
+          WEBHOOK_TOKEN: ${{ secrets.WEBHOOK_TOKEN }}
         if: steps.publish.outcome == 'success'
         run: |
           curl -X POST "https://backslashn.app.n8n.cloud/webhook-test/6af37fb4-0435-4e58-9f8b-3cd0f06b88d7" \
