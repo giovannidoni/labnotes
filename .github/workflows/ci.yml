@@ -36,10 +36,11 @@ jobs:
 
         run: |
 
-          docker run ${{ env.REPO }} \
+          docker run \
           -e OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}" \
           -e FIRECRAWL_API_KEY="${{ secrets.FIRECRAWL_API_KEY }}" \
-          /bin/bash -c ./exec.sh ${{ inputs.top }}
+          ${{ env.REPO }} \
+          ./exec.sh ${{ inputs.top }}
 
       - name: Publish result
         run: |
