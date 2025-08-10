@@ -11,14 +11,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Set working directory
 WORKDIR /app
 
-# Copy dependency files
-COPY pyproject.toml uv.lock ./
-
 # Install uv for fast Python package management
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
+# Copy dependency files
+COPY pyproject.toml uv.lock ./
+
 # Install dependencies
-RUN uv sync && uv pip install .
+RUN uv sync 
+
+# Copy source code
+COPY . .
+
+# Install the package in editable mode
+RUN uv pip install -e .
 
 # Runtime stage
 FROM python:3.11-slim
@@ -35,7 +41,6 @@ RUN useradd -m -u 1000 appuser
 WORKDIR /app
 
 # Copy Python packages from builder
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 COPY --from=builder /app/.venv /app/.venv
 
 # Copy application code
