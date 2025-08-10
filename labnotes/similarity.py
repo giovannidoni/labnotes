@@ -7,6 +7,7 @@ import logging
 from typing import List, Dict, Any, Tuple, Optional
 from datetime import datetime
 import numpy as np
+import traceback
 
 from labnotes.embeddings import get_embedding_service
 
@@ -32,7 +33,8 @@ def calculate_cosine_similarity(embedding1: np.ndarray, embedding2: np.ndarray) 
         return similarity
 
     except Exception as e:
-        logger.warning(f"Failed to calculate cosine similarity: {e}")
+        error = traceback.format_exc()
+        logger.error(f"Failed to calculate cosine similarity: {error}")
         return 0.0
 
 
@@ -83,7 +85,7 @@ async def remove_similar_items(
         if embedding is not None:
             # Create a copy of the item and add the embedding
             item_with_embedding = item.copy()
-            item_with_embedding['embedding'] = embedding.tolist()  # Convert numpy array to list for JSON serialization
+            item_with_embedding["embedding"] = embedding.tolist()  # Convert numpy array to list for JSON serialization
             valid_items.append(item_with_embedding)
             valid_embeddings.append(embedding)
         else:
@@ -99,7 +101,7 @@ async def remove_similar_items(
         for item, embedding in zip(items, embeddings):
             if embedding is not None:
                 item_with_embedding = item.copy()
-                item_with_embedding['embedding'] = embedding.tolist()
+                # item_with_embedding['embedding'] = embedding.tolist()
                 final_items.append(item_with_embedding)
             else:
                 final_items.append(item)
@@ -129,7 +131,7 @@ async def remove_similar_items(
         for item, embedding in zip(items, embeddings):
             if embedding is not None:
                 item_with_embedding = item.copy()
-                item_with_embedding['embedding'] = embedding.tolist()
+                # item_with_embedding['embedding'] = embedding.tolist()
                 final_items.append(item_with_embedding)
             else:
                 final_items.append(item)
@@ -196,7 +198,8 @@ async def remove_similar_items(
 
     # Add items that had valid embeddings and were kept
     for idx in sorted(items_to_keep):
-        final_items.append(valid_items[idx])
+        valid_item = {k: v for k, v in valid_items[idx].items() if k != "embedding"}  # Exclude embedding
+        final_items.append(valid_item)
 
     # Add items that couldn't get embeddings (preserve them)
     for item, embedding in zip(items, embeddings):

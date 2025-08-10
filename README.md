@@ -37,16 +37,16 @@ After generating a digest, you can remove similar articles using embedding-based
 ```bash
 # Basic deduplication (keeps most recent of similar articles)
 # Processes the most recent digest file in the specified section directory
-labnotes-dedup /path/to/digest/output --section ai_research_and_models
+labnotes-dedup --input /path/to/digest/output --section ai_research_and_models
 
 # Keep highest scoring articles instead of most recent
-labnotes-dedup /path/to/digest/output --section tech_news --prefer-score
+labnotes-dedup --input /path/to/digest/output --section tech_news --prefer-score
 
 # Adjust similarity threshold (0-1, higher = more strict)
-labnotes-dedup /path/to/digest/output --section ai_research_and_models --threshold 0.9
+labnotes-dedup --input /path/to/digest/output --section ai_research_and_models --threshold 0.9
 
 # Use OpenAI embeddings for better similarity detection
-labnotes-dedup /path/to/digest/output --section ai_research_and_models --model text-embedding-3-small
+labnotes-dedup --input /path/to/digest/output --section ai_research_and_models --model text-embedding-3-small
 ```
 
 **Output Enhancement**: The deduplication process now automatically saves embeddings as an additional field in the output JSON. Each deduplicated item will include an `embedding` field containing the vector representation used for similarity detection, enabling further analysis or custom similarity comparisons.
@@ -148,7 +148,7 @@ export FIRECRAWL_API_KEY=your_firecrawl_api_key
 labnotes --hours 24 --top 10 --format json --out ./output
 
 # 2. Remove similar articles
-labnotes-dedup ./output/digest-2025-08-09_18-03.json --threshold 0.85
+labnotes-dedup --input ./output --section ai_research_and_models --threshold 0.85
 
 # 3. Generate final markdown output
 labnotes --hours 24 --top 5 --format md --out ./final
@@ -160,11 +160,11 @@ labnotes --hours 24 --top 5 --format md --out ./final
 # High-quality processing with OpenAI
 export OPENAI_API_KEY=your_key
 labnotes --model text-embedding-3-small --scraper firecrawl
-labnotes-dedup digest.json --model text-embedding-3-small --threshold 0.9
+labnotes-dedup --input ./output --section ai_research_and_models --model text-embedding-3-small --threshold 0.9
 
 # Privacy-focused local processing
 labnotes --model all-MiniLM-L6-v2
-labnotes-dedup digest.json --model all-mpnet-base-v2
+labnotes-dedup --input ./output --section ai_research_and_models --model all-mpnet-base-v2
 ```
 
 ## File Structure
@@ -195,5 +195,5 @@ pip install -e .
 
 # Run with debug logging
 labnotes --log-level DEBUG
-labnotes-dedup digest.json --log-level DEBUG
+labnotes-dedup --input ./output --section ai_research_and_models --log-level DEBUG
 ```

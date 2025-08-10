@@ -8,6 +8,7 @@ import logging
 from typing import List, Dict, Any, Optional, Union
 import numpy as np
 import os
+import traceback
 
 from sentence_transformers import SentenceTransformer
 import openai
@@ -52,7 +53,8 @@ class OpenAIEmbeddingService:
             logger.info(f"Successfully initialized OpenAI embedding service")
             return True
         except Exception as e:
-            logger.error(f"Failed to initialize OpenAI embedding service: {e}")
+            error = traceback.format_exc()
+            logger.error(f"Failed to initialize OpenAI embedding service: {error}")
             return False
 
     def _extract_text_for_embedding(self, item: Dict[str, Any]) -> str:
@@ -104,7 +106,8 @@ class OpenAIEmbeddingService:
             return embedding
 
         except Exception as e:
-            logger.warning(f"Failed to generate OpenAI embedding for '{item.get('title', 'Unknown')[:50]}...': {e}")
+            error = traceback.format_exc()
+            logger.warning(f"Failed to generate OpenAI embedding for '{item.get('title', 'Unknown')[:50]}...': {error}")
             return None
 
     async def generate_embeddings_batch(self, items: List[Dict[str, Any]]) -> List[Optional[np.ndarray]]:
@@ -156,7 +159,8 @@ class EmbeddingService:
             logger.info(f"Successfully loaded embedding model: {self.model_name}")
             return True
         except Exception as e:
-            logger.error(f"Failed to load embedding model {self.model_name}: {e}")
+            error = traceback.format_exc()
+            logger.error(f"Failed to load embedding model {self.model_name}: {error}")
             return False
 
     def _extract_text_for_embedding(self, item: Dict[str, Any]) -> str:
@@ -202,7 +206,8 @@ class EmbeddingService:
             return embedding
 
         except Exception as e:
-            logger.warning(f"Failed to generate embedding for '{item.get('title', 'Unknown')[:50]}...': {e}")
+            error = traceback.format_exc()
+            logger.warning(f"Failed to generate embedding for '{item.get('title', 'Unknown')[:50]}...': {error}")
             return None
 
     async def generate_embeddings_batch(self, items: List[Dict[str, Any]]) -> List[Optional[np.ndarray]]:
@@ -263,5 +268,6 @@ def get_embedding_service(
         return _embedding_service
 
     except Exception as e:
-        logger.error(f"Failed to create embedding service: {e}")
+        error = traceback.format_exc()
+        logger.error(f"Failed to create embedding service: {error}")
         return None

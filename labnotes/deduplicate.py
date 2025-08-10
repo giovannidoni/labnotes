@@ -9,47 +9,16 @@ import json
 import asyncio
 import logging
 import sys
+import traceback
 from pathlib import Path
 from typing import List, Dict, Any
 from datetime import datetime
 
 from labnotes.utils import setup_logging
 from labnotes.similarity import remove_similar_items, parse_date_for_comparison
+from labnotes.utils import save_output, load_input, find_most_recent_file
 
 logger = logging.getLogger(__name__)
-
-
-def find_most_recent_file(directory: Path, pattern: str = "*.json") -> Path:
-    """Find the most recent file matching the pattern in the given directory."""
-    files = list(directory.glob(pattern))
-    if not files:
-        raise FileNotFoundError(f"No files matching '{pattern}' found in directory: {directory}")
-    
-    # Return the file with the most recent modification time
-    return max(files, key=lambda f: f.stat().st_mtime)
-
-
-def load_digest(filepath: str) -> List[Dict[str, Any]]:
-    """Load digest JSON file."""
-    try:
-        with open(filepath, "r", encoding="utf-8") as f:
-            items = json.load(f)
-        logger.info(f"Loaded {len(items)} items from {filepath}")
-        return items
-    except Exception as e:
-        logger.error(f"Failed to load digest file {filepath}: {e}")
-        raise
-
-
-def save_deduplicated(items: List[Dict[str, Any]], output_path: str) -> None:
-    """Save deduplicated items to JSON file."""
-    try:
-        with open(output_path, "w", encoding="utf-8") as f:
-            json.dump(items, f, indent=2, ensure_ascii=False)
-        logger.info(f"Saved {len(items)} deduplicated items to {output_path}")
-    except Exception as e:
-        logger.error(f"Failed to save deduplicated file {output_path}: {e}")
-        raise
 
 
 def is_openai_model(model_name: str) -> bool:
@@ -170,7 +139,9 @@ async def main_async():
     """Main async function."""
     parser = argparse.ArgumentParser(description="Deduplicate digest items based on similarity")
     parser.add_argument("--input", required=True, help="Input JSON digest path")
-    parser.add_argument("--section", required=True, help="process only one section/group from feeds (e.g., 'ai_research_and_models')")
+    parser.add_argument(
+        "--section", required=True, help="process only one section/group from feeds (e.g., 'ai_research_and_models')"
+    )
 
     parser.add_argument("-t", "--threshold", type=float, default=0.5, help="Similarity threshold (0-1, default: 0.5)")
     parser.add_argument(
@@ -197,21 +168,21 @@ async def main_async():
 
     # Determine input and output paths
     input_path = Path(args.input) / args.section
-    
+
     # Find the most recent JSON file in the input path
     try:
-        input_file = find_most_recent_file(input_path)
+        input_file = find_most_recent_file(input_path, pattern=f"{args.section}*digest_*.json")
     except FileNotFoundError as e:
         logger.info("No digest files found, please run the digest command first.")
         return 0
 
     output_file = str(input_file).replace("digest", "deduped")
-    
+
     logger.info(f"Input: {input_file}, Output: {output_file}")
 
     try:
         # Load digest
-        items = load_digest(str(input_file))
+        items = load_input(str(input_file))
 
         if not items:
             logger.warning("No items to process")
@@ -227,7 +198,7 @@ async def main_async():
         )
 
         # Save results
-        save_deduplicated(deduplicated, output_file)
+        save_output(deduplicated, output_file)
 
         # Report statistics
         removed_count = len(items) - len(deduplicated)
@@ -238,7 +209,8 @@ async def main_async():
         return 0
 
     except Exception as e:
-        logger.error(f"Deduplication failed: {e}")
+        error = traceback.format_exc()
+        logger.error(f"Deduplication failed: {error}")
         return 1
 
 
@@ -251,7 +223,8 @@ def main():
         logger.info("Process interrupted by user")
         sys.exit(130)
     except Exception as e:
-        logger.error(f"Unexpected error: {e}")
+        error = traceback.format_exc()
+        logger.error(f"Unexpected error: {error}")
         sys.exit(1)
 
 

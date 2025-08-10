@@ -9,6 +9,7 @@ import re
 from enum import Enum
 from typing import Optional, Tuple
 from urllib.parse import urlparse
+import traceback
 
 import aiohttp
 from bs4 import BeautifulSoup
@@ -32,7 +33,8 @@ def domain_of(link: str) -> str:
         logger.debug(f"Extracted domain: {domain} from {link}")
         return domain
     except Exception as e:
-        logger.warning(f"Failed to extract domain from {link}: {e}")
+        error = traceback.format_exc()
+        logger.warning(f"Failed to extract domain from {link}: {error}")
         return ""
 
 
@@ -49,7 +51,8 @@ def is_pdf_url(url: str) -> bool:
         logger.debug(f"PDF check for {url}: {is_pdf}")
         return is_pdf
     except Exception as e:
-        logger.warning(f"Error checking if URL is PDF {url}: {e}")
+        error = traceback.format_exc()
+        logger.warning(f"Error checking if URL is PDF {url}: {error}")
         return False
 
 
@@ -84,7 +87,8 @@ async def scrape_with_newspaper(session: aiohttp.ClientSession, url: str, timeou
         return result
 
     except Exception as e:
-        logger.warning(f"Newspaper3k failed for {url}: {e}")
+        error = traceback.format_exc()
+        logger.warning(f"Newspaper3k failed for {url}: {error}")
         return ""
 
 
@@ -137,7 +141,8 @@ async def scrape_with_beautifulsoup(session: aiohttp.ClientSession, url: str, ti
         return result
 
     except Exception as e:
-        logger.warning(f"BeautifulSoup failed for {url}: {e}")
+        error = traceback.format_exc()
+        logger.warning(f"BeautifulSoup failed for {url}: {error}")
         return ""
 
 
@@ -186,7 +191,8 @@ async def scrape_with_firecrawl(url: str, firecrawl_app: Optional[FirecrawlApp] 
         return result
 
     except Exception as e:
-        logger.warning(f"Firecrawl failed for {url}: {e}")
+        error = traceback.format_exc()
+        logger.warning(f"Firecrawl failed for {url}: {error}")
         return ""
 
 
@@ -249,7 +255,8 @@ async def follow_aggregator_link(session: aiohttp.ClientSession, url: str, timeo
                                 logger.info(f"Found original source: {original_url} (from {url})")
                                 return original_url, original_domain
                     except Exception as e:
-                        logger.debug(f"Error processing selector {selector}: {e}")
+                        error = traceback.format_exc()
+                        logger.debug(f"Error processing selector {selector}: {error}")
                         continue
 
                 # If no obvious link found, try to extract from meta tags or structured data
@@ -282,7 +289,8 @@ async def follow_aggregator_link(session: aiohttp.ClientSession, url: str, timeo
         return url, domain_of(url)
 
     except Exception as e:
-        logger.warning(f"Failed to follow aggregator link {url}: {e}")
+        error = traceback.format_exc()
+        logger.warning(f"Failed to follow aggregator link {url}: {error}")
         return url, domain_of(url)
 
 

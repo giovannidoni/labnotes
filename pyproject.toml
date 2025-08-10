@@ -43,6 +43,7 @@ exclude = ["tests"]
 [project.scripts]
 labnotes = "labnotes.digest:main"
 labnotes-dedup = "labnotes.deduplicate:main"
+labnotes-summarise = "labnotes.summarise:main"
 
 [tool.setuptools.packages.find]
 where = ["."]

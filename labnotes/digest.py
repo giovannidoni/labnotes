@@ -3,6 +3,7 @@ import argparse, datetime, json, re, sys, time, asyncio, os, logging
 from urllib.parse import urlparse
 from typing import List, Dict, Any, Optional
 from pathlib import Path
+import traceback
 
 import feedparser
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -252,7 +253,8 @@ async def fetch_feed_items(
         logger.info(f"Successfully processed {len(items)} items from {group} ({success_count} with scraped content)")
 
     except Exception as e:
-        logger.error(f"Failed to fetch feed {url}: {e}")
+        error = traceback.format_exc()
+        logger.error(f"Failed to fetch feed {url}: {error}")
 
     return items
 
@@ -380,7 +382,8 @@ async def fetch_all(
                 firecrawl_app = FirecrawlApp(api_key=api_key)
                 logger.info("Using Firecrawl for web scraping")
             except Exception as e:
-                logger.warning(f"Failed to initialize Firecrawl: {e}")
+                error = traceback.format_exc()
+                logger.warning(f"Failed to initialize Firecrawl: {error}")
                 logger.info("Falling back to newspaper3k scraping")
                 scraping_method = ScrapingMethod.NEWSPAPER
         else:
@@ -443,7 +446,6 @@ async def fetch_all(
 
 
 async def render_outputs(items: List[Dict[str, Any]], section: str, out_dir: str) -> None:
-
     out_dir = out_dir.rstrip("/")
     os.makedirs(out_dir, exist_ok=True)
     ts = datetime.datetime.utcnow().strftime("%Y-%m-%d_%H-%M")
@@ -471,7 +473,8 @@ async def write_file(filepath: str, content: str) -> None:
             await f.write(content)
         logger.debug(f"Successfully wrote file: {filepath}")
     except Exception as e:
-        logger.error(f"Failed to write file {filepath}: {e}")
+        error = traceback.format_exc()
+        logger.error(f"Failed to write file {filepath}: {error}")
         raise
 
 
@@ -512,7 +515,8 @@ async def main_async():
             kw = json.load(f)
         logger.info(f"Loaded keywords configuration from {args.keywords}")
     except Exception as e:
-        logger.error(f"Failed to load configuration files: {e}")
+        error = traceback.format_exc()
+        logger.error(f"Failed to load configuration files: {error}")
         return 1
 
     scraping_method = ScrapingMethod(args.scraper)
@@ -528,7 +532,7 @@ async def main_async():
         # Store individual scores for easy access
         it["_score_engineers"] = scores.get("engineers", {}).get("score", 0)
         it["_score_managers"] = scores.get("managers", {}).get("score", 0)
-        it["_score"] = it["_score_engineers"] + it["_score_managers"] # Combined score for sorting
+        it["_score"] = it["_score_engineers"] + it["_score_managers"]  # Combined score for sorting
 
         # Keep legacy _score field as engineers score for backward compatibility
         # it["_score"] = it["_score_engineers"]
@@ -562,7 +566,8 @@ def main():
         logger.info("Process interrupted by user")
         sys.exit(130)
     except Exception as e:
-        logger.error(f"Unexpected error: {e}")
+        error = traceback.format_exc()
+        logger.error(f"Unexpected error: {error}")
         sys.exit(1)
 
 
@@ -574,5 +579,6 @@ if __name__ == "__main__":
         logger.info("Process interrupted by user")
         sys.exit(130)
     except Exception as e:
-        logger.error(f"Unexpected error: {e}")
+        error = traceback.format_exc()
+        logger.error(f"Unexpected error: {error}")
         sys.exit(1)

@@ -1,4 +1,49 @@
+from typing import List, Dict, Any
 import logging
+from pathlib import Path
+import json
+import yaml
+import traceback
+
+
+logger = logging.getLogger(__name__)
+
+
+def save_output(items: List[Dict[str, Any]], output_path: str) -> None:
+    """Save deduplicated items to JSON file."""
+    try:
+        with open(output_path, "w", encoding="utf-8") as f:
+            json.dump(items, f, indent=2, ensure_ascii=False)
+        logger.info(f"Saved {len(items)} deduplicated items to {output_path}")
+    except Exception as e:
+        error = traceback.format_exc()
+        logger.error(f"Failed to save deduplicated file {output_path}: {error}")
+        raise
+
+
+def load_input(filepath: str) -> List[Dict[str, Any]]:
+    """Load JSON file."""
+    try:
+        with open(filepath, "r", encoding="utf-8") as f:
+            items = json.load(f)
+
+        logger.info(f"Loaded {len(items)} items from {filepath}")
+        return items
+    except Exception as e:
+        error = traceback.format_exc()
+        logger.error(f"Failed to load JSON file {filepath}: {error}")
+        raise
+
+
+def find_most_recent_file(directory: Path, pattern: str = "*.json") -> Path:
+    """Find the most recent file matching the pattern in the given directory."""
+    files = list(directory.glob(pattern))
+    if not files:
+        logger.warning(f"No files matching '{pattern}' found in directory: {directory}")
+        return None
+
+    # Return the file with the most recent modification time
+    return max(files, key=lambda f: f.stat().st_mtime)
 
 
 def setup_logging(level: str = "INFO") -> None:
@@ -18,3 +63,24 @@ def setup_logging(level: str = "INFO") -> None:
     logging.getLogger("sentence_transformers").setLevel(logging.WARNING)
     logging.getLogger("transformers").setLevel(logging.WARNING)
     logging.getLogger("torch").setLevel(logging.WARNING)
+
+
+def get_feed_sections() -> List[str]:
+    """Get the list of feed sections from feeds.yaml."""
+    feeds_file = Path(__file__).parent / "data" / "feeds.yaml"
+    try:
+        with open(feeds_file, "r", encoding="utf-8") as f:
+            feeds_data = yaml.safe_load(f)
+
+        if not feeds_data:
+            logger.warning("Feeds file is empty")
+            return []
+
+        sections = list(feeds_data.keys())
+        logger.debug(f"Found {len(sections)} feed sections: {sections}")
+        return sections
+
+    except Exception as e:
+        error = traceback.format_exc()
+        logger.error(f"Failed to load feed sections: {error}")
+        return []
