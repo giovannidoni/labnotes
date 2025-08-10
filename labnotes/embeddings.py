@@ -10,7 +10,7 @@ import numpy as np
 import os
 import traceback
 
-from sentence_transformers import SentenceTransformer
+# from sentence_transformers import SentenceTransformer
 import openai
 
 
@@ -138,104 +138,104 @@ class OpenAIEmbeddingService:
         return result_embeddings
 
 
-class EmbeddingService:
-    """Service for generating embeddings from text content using lightweight models."""
+# class EmbeddingService:
+#     """Service for generating embeddings from text content using lightweight models."""
 
-    def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
-        """Initialize the embedding service."""
-        self.model_name = model_name
-        self.model = None
-        self.initialized = False
+#     def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
+#         """Initialize the embedding service."""
+#         self.model_name = model_name
+#         self.model = None
+#         self.initialized = False
 
-    def _ensure_initialized(self) -> bool:
-        """Lazy initialize the model to avoid loading it unless needed."""
-        if self.initialized:
-            return True
+#     def _ensure_initialized(self) -> bool:
+#         """Lazy initialize the model to avoid loading it unless needed."""
+#         if self.initialized:
+#             return True
 
-        try:
-            logger.info(f"Loading embedding model: {self.model_name}")
-            self.model = SentenceTransformer(self.model_name)
-            self.initialized = True
-            logger.info(f"Successfully loaded embedding model: {self.model_name}")
-            return True
-        except Exception as e:
-            error = traceback.format_exc()
-            logger.error(f"Failed to load embedding model {self.model_name}: {error}")
-            return False
+#         try:
+#             logger.info(f"Loading embedding model: {self.model_name}")
+#             self.model = SentenceTransformer(self.model_name)
+#             self.initialized = True
+#             logger.info(f"Successfully loaded embedding model: {self.model_name}")
+#             return True
+#         except Exception as e:
+#             error = traceback.format_exc()
+#             logger.error(f"Failed to load embedding model {self.model_name}: {error}")
+#             return False
 
-    def _extract_text_for_embedding(self, item: Dict[str, Any]) -> str:
-        """Extract and prepare text from item for embedding generation."""
-        # Combine title, content, and full_content for comprehensive embedding
-        title = item.get("title", "") or ""
-        content = item.get("content", "") or ""
-        full_content = item.get("full_content", "") or ""
+#     def _extract_text_for_embedding(self, item: Dict[str, Any]) -> str:
+#         """Extract and prepare text from item for embedding generation."""
+#         # Combine title, content, and full_content for comprehensive embedding
+#         title = item.get("title", "") or ""
+#         content = item.get("content", "") or ""
+#         full_content = item.get("full_content", "") or ""
 
-        # Use the longer content field and combine with title
-        main_content = full_content if len(full_content) > len(content) else content
+#         # Use the longer content field and combine with title
+#         main_content = full_content if len(full_content) > len(content) else content
 
-        # Combine title and content, but avoid excessive duplication
-        if title and not title.lower() in main_content.lower()[:200]:
-            text = f"{title}. {main_content}"
-        else:
-            text = main_content or title
+#         # Combine title and content, but avoid excessive duplication
+#         if title and not title.lower() in main_content.lower()[:200]:
+#             text = f"{title}. {main_content}"
+#         else:
+#             text = main_content or title
 
-        # Truncate to reasonable length for embedding (models typically have token limits)
-        # Most sentence-transformers models work well with 200-500 tokens
-        text = text[:2000]  # Roughly 300-500 tokens depending on the text
+#         # Truncate to reasonable length for embedding (models typically have token limits)
+#         # Most sentence-transformers models work well with 200-500 tokens
+#         text = text[:2000]  # Roughly 300-500 tokens depending on the text
 
-        return text.strip()
+#         return text.strip()
 
-    async def generate_embedding(self, item: Dict[str, Any]) -> Optional[np.ndarray]:
-        """Generate embedding for a single item asynchronously."""
-        if not self._ensure_initialized():
-            return None
+#     async def generate_embedding(self, item: Dict[str, Any]) -> Optional[np.ndarray]:
+#         """Generate embedding for a single item asynchronously."""
+#         if not self._ensure_initialized():
+#             return None
 
-        try:
-            text = self._extract_text_for_embedding(item)
-            if not text:
-                logger.debug(f"No text found for embedding: {item.get('title', 'Unknown')}")
-                return None
+#         try:
+#             text = self._extract_text_for_embedding(item)
+#             if not text:
+#                 logger.debug(f"No text found for embedding: {item.get('title', 'Unknown')}")
+#                 return None
 
-            # Run embedding generation in thread pool to avoid blocking
-            loop = asyncio.get_event_loop()
-            embedding = await loop.run_in_executor(
-                None, self.model.encode, text, {"convert_to_numpy": True, "normalize_embeddings": True}
-            )
+#             # Run embedding generation in thread pool to avoid blocking
+#             loop = asyncio.get_event_loop()
+#             embedding = await loop.run_in_executor(
+#                 None, self.model.encode, text, {"convert_to_numpy": True, "normalize_embeddings": True}
+#             )
 
-            logger.debug(f"Generated embedding for '{item.get('title', 'Unknown')[:50]}...': shape={embedding.shape}")
-            return embedding
+#             logger.debug(f"Generated embedding for '{item.get('title', 'Unknown')[:50]}...': shape={embedding.shape}")
+#             return embedding
 
-        except Exception as e:
-            error = traceback.format_exc()
-            logger.warning(f"Failed to generate embedding for '{item.get('title', 'Unknown')[:50]}...': {error}")
-            return None
+#         except Exception as e:
+#             error = traceback.format_exc()
+#             logger.warning(f"Failed to generate embedding for '{item.get('title', 'Unknown')[:50]}...': {error}")
+#             return None
 
-    async def generate_embeddings_batch(self, items: List[Dict[str, Any]]) -> List[Optional[np.ndarray]]:
-        """Generate embeddings for multiple items concurrently."""
-        if not self._ensure_initialized():
-            return [None] * len(items)
+#     async def generate_embeddings_batch(self, items: List[Dict[str, Any]]) -> List[Optional[np.ndarray]]:
+#         """Generate embeddings for multiple items concurrently."""
+#         if not self._ensure_initialized():
+#             return [None] * len(items)
 
-        logger.info(f"Generating embeddings for {len(items)} items...")
+#         logger.info(f"Generating embeddings for {len(items)} items...")
 
-        # Generate embeddings concurrently
-        tasks = [self.generate_embedding(item) for item in items]
-        embeddings = await asyncio.gather(*tasks, return_exceptions=True)
+#         # Generate embeddings concurrently
+#         tasks = [self.generate_embedding(item) for item in items]
+#         embeddings = await asyncio.gather(*tasks, return_exceptions=True)
 
-        # Handle exceptions in results
-        result_embeddings = []
-        successful = 0
-        for i, embedding in enumerate(embeddings):
-            if isinstance(embedding, Exception):
-                logger.warning(f"Embedding generation failed for item {i}: {embedding}")
-                result_embeddings.append(None)
-            elif embedding is not None:
-                result_embeddings.append(embedding)
-                successful += 1
-            else:
-                result_embeddings.append(None)
+#         # Handle exceptions in results
+#         result_embeddings = []
+#         successful = 0
+#         for i, embedding in enumerate(embeddings):
+#             if isinstance(embedding, Exception):
+#                 logger.warning(f"Embedding generation failed for item {i}: {embedding}")
+#                 result_embeddings.append(None)
+#             elif embedding is not None:
+#                 result_embeddings.append(embedding)
+#                 successful += 1
+#             else:
+#                 result_embeddings.append(None)
 
-        logger.info(f"Successfully generated {successful}/{len(items)} embeddings")
-        return result_embeddings
+#         logger.info(f"Successfully generated {successful}/{len(items)} embeddings")
+#         return result_embeddings
 
 
 def get_embedding_service(
@@ -264,7 +264,8 @@ def get_embedding_service(
 
         # Use sentence-transformers (default or fallback)
         if _embedding_service is None or _embedding_service.model_name != model_name:
-            _embedding_service = EmbeddingService(model_name)
+            # _embedding_service = EmbeddingService(model_name)
+            pass
         return _embedding_service
 
     except Exception as e:

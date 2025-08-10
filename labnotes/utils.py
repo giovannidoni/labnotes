@@ -14,10 +14,10 @@ def save_output(items: List[Dict[str, Any]], output_path: str) -> None:
     try:
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(items, f, indent=2, ensure_ascii=False)
-        logger.info(f"Saved {len(items)} deduplicated items to {output_path}")
+        logger.info(f"Saved {len(items)} items to {output_path}")
     except Exception as e:
         error = traceback.format_exc()
-        logger.error(f"Failed to save deduplicated file {output_path}: {error}")
+        logger.error(f"Failed to save file {output_path}: {error}")
         raise
 
 

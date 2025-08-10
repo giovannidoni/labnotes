@@ -32,9 +32,9 @@ def map_novelty_score_to_int(score_text: str) -> int:
     return score_mapping.get(normalized_score, 3)
 
 
-def load_prompt_template() -> str:
-    """Load the summarisation prompt template from sumarisation.txt."""
-    prompt_file = Path(__file__).parent / "data" / "sumarisation.txt"
+def load_prompt_template(prompt_type) -> str:
+    """Load the summarisation prompt template."""
+    prompt_file = Path(__file__).parent / "data" / f"{prompt_type}.txt"
     try:
         with open(prompt_file, "r", encoding="utf-8") as f:
             return f.read().strip()
@@ -66,7 +66,7 @@ class SummarisationService:
                 return False
 
             self.client = openai.OpenAI(api_key=api_key)
-            self.prompt_template = load_prompt_template()
+            self.prompt_template = load_prompt_template("summarisation")
 
             if not self.prompt_template:
                 logger.error("Failed to load prompt template")

@@ -14,7 +14,7 @@ import asyncio
 import traceback
 from pathlib import Path
 from labnotes.summarise import load_prompt_template
-from labnotes.utils import setup_logging, get_feed_sections, find_most_recent_file, load_input
+from labnotes.utils import setup_logging, get_feed_sections, find_most_recent_file, load_input, save_output
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +41,7 @@ class ResultSummarisationService:
                 return False
 
             self.client = openai.OpenAI(api_key=api_key)
-            self.prompt_template = load_prompt_template()
+            self.prompt_template = load_prompt_template("collect_summaries")
 
             if not self.prompt_template:
                 logger.error("Failed to load prompt template")
@@ -55,24 +55,23 @@ class ResultSummarisationService:
             logger.error(f"Failed to initialize summarisation service: {error}")
             return False
 
-    def _prompt_for_item(self, item: Dict[str, Any]) -> str:
+    def _prompt_for_item(self, item: Dict[str, Any], index: int) -> str:
         """Extract text content from item for summarisation."""
         title = item.get("title", "") or ""
         summary = item.get("summary", "") or ""
         link = item.get("link", "") or ""
-        assert str(item.get("index"))
-        index = item.get("index")
 
         text = f"Index: {index}\nTitle: {title}\nLink: {link}\nSummary: {summary}"
 
         return text.strip()
 
-    def _prompt_for_section(self, items: List[Dict[str, Any]], section: str) -> str:
+    def _prompt_for_section(self, items: List[Dict[str, Any]], section: str, index: int) -> str:
         """Extract text content from item for summarisation."""
         if not section:
             section = ""
         for item in items:
-            content = self._prompt_for_item(item)
+            content = self._prompt_for_item(item, index)
+            index += 1
             if content:
                 section += f"{content}\n\n"
         return section.strip()
@@ -80,14 +79,16 @@ class ResultSummarisationService:
     def _get_prompt_input(self, section_items: Dict[str, List[Dict[str, Any]]]) -> str:
         """Extract text content from item for summarisation."""
         full_prompt = ""
+        index = 0
         for section, items in section_items.items():
             section_header = f"***Section: {section}***\n"
             if section == section:
-                full_prompt += self._prompt_for_section(items, section_header)
+                full_prompt += self._prompt_for_section(items, section_header, index)
+                index += len(items)
 
         return full_prompt.strip()
 
-    async def process_items_batch(self, section_items: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def process_items_batch(self, section_items: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Generate result summary for a batch of items."""
         if not self._ensure_initialized():
             return None
@@ -102,8 +103,9 @@ class ResultSummarisationService:
             response_schema = {
                 "type": "object",
                 "properties": {
-                    "picked_headlines": [
-                        {
+                    "picked_headlines": {
+                        "type": "array",
+                        "items": {
                             "type": "object",
                             "properties": {
                                 "item_number": {
@@ -116,7 +118,6 @@ class ResultSummarisationService:
                                 },
                                 "link": {
                                     "type": "string",
-                                    "format": "uri",
                                     "description": "Link to the original article",
                                 },
                                 "reason_for_choice": {
@@ -125,8 +126,9 @@ class ResultSummarisationService:
                                 },
                             },
                             "required": ["item_number", "summary", "link", "reason_for_choice"],
+                            "additionalProperties": False,
                         }
-                    ],
+                    },
                     "digest": {
                         "type": "string",
                         "description": "Summary of the most important information across other posts",
@@ -138,11 +140,12 @@ class ResultSummarisationService:
 
             # Run OpenAI API call in thread pool to avoid blocking
             loop = asyncio.get_event_loop()
-            response = await self.client.chat.completions.create(
+            logger.debug(full_prompt)
+            response = self.client.chat.completions.create(
                 model=self.model_name,
                 messages=[{"role": "user", "content": full_prompt}],
                 temperature=0.3,
-                max_tokens=200,
+                max_tokens=2500,
                 response_format={
                     "type": "json_schema",
                     "json_schema": {"name": "article_summary", "schema": response_schema, "strict": True},
@@ -153,6 +156,7 @@ class ResultSummarisationService:
 
             # Parse JSON response
             try:
+                logger.info(f"Generated result summary: {summary_response}")
                 summary_data = json.loads(summary_response)
                 logger.debug(f"Generated result summary.")
                 return summary_data
@@ -201,7 +205,7 @@ def filter_items_by_score(items, min_score=0.0, min_novelty_score=0.0, filter_mo
     return filtered_items
 
 
-async def summarise_results(
+def summarise_results(
     section_items: List[Dict[str, Any]],
     model_name: str = "gpt-4o-mini",
 ) -> List[Dict[str, Any]]:
@@ -214,12 +218,12 @@ async def summarise_results(
     result_service = ResultSummarisationService(model_name)
 
     # Generate summaries and add to items
-    enhanced_items = await result_service.process_items_batch(section_items)
+    enhanced_items = result_service.process_items_batch(section_items)
 
     return enhanced_items
 
 
-async def main_async():
+def _main():
     """Main async function."""
     parser = argparse.ArgumentParser(description="summarise digest items using AI prompts")
     parser.add_argument("--input", required=True, help="Input JSON digest path")
@@ -278,17 +282,18 @@ async def main_async():
             logger.error(f"Failed to process section {section}: {error}")
             continue
 
-    results = await summarise_results(
+    results = summarise_results(
         section_items,
         model_name=args.model,
     )
+    save_output_path = Path(args.input) / "summarised_results.json"
+    save_output(results, str(save_output_path))
 
 
 def main():
     """Synchronous CLI entry point wrapper."""
     try:
-        exit_code = asyncio.run(main_async())
-        sys.exit(exit_code)
+        _main()
     except KeyboardInterrupt:
         logger.info("Process interrupted by user")
         sys.exit(130)

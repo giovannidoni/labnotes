@@ -16,7 +16,6 @@ dependencies = [
   "newspaper3k>=0.2.8",
   "lxml-html-clean>=0.1.0",
   "numpy>=2.2.6",
-  "sentence-transformers>=5.1.0",
   "openai>=1.99.6",
 ]
 
@@ -44,6 +43,7 @@ exclude = ["tests"]
 labnotes = "labnotes.digest:main"
 labnotes-dedup = "labnotes.deduplicate:main"
 labnotes-summarise = "labnotes.summarise:main"
+labnotes-collect = "labnotes.collect:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
