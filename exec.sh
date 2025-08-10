@@ -17,10 +17,10 @@ do
     uv run labnotes-dedup --input ./out --section $section --threshold 0.7 --prefer-score --log-level INFO
 done
 
-for section in "${sections[@]}"
-do
-    echo "Running labnotes summarise for section: $section"
-    uv run labnotes-summarise --input ./out --section $section --log-level INFO
-done
+# for section in "${sections[@]}"
+# do
+#     echo "Running labnotes summarise for section: $section"
+#     uv run labnotes-summarise --input ./out --section $section --log-level INFO
+# done
 
- uv run labnotes-collect --input ./out --log-level INFO
+#  uv run labnotes-collect --input ./out --log-level INFO
