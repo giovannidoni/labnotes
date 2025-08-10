@@ -38,8 +38,8 @@ jobs:
           FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
         run: |
           docker run \
-          -e OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}" \
-          -e FIRECRAWL_API_KEY="${{ secrets.FIRECRAWL_API_KEY }}" \
+          -e OPENAI_API_KEY="$OPENAI_API_KEY" \
+          -e FIRECRAWL_API_KEY="$FIRECRAWL_API_KEY" \
           ${{ env.REPO }} \
           /bin/bash  ./exec.sh ${{ inputs.top }}
 
