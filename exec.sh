@@ -4,6 +4,7 @@ sections=(
     "engineering_leadership_and_management"
 )
 TOP=${1:-100}
+echo $TOP
 for section in "${sections[@]}"
 do
     echo "Running labnotes for section: $section"
