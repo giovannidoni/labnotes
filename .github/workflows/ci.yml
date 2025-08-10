@@ -39,6 +39,7 @@ jobs:
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
+          WEBHOOK_TOKEN: ${{ secrets.WEBHOOK_TOKEN }}
         run: |
           echo "Checking secrets availability..."
           
@@ -79,8 +80,6 @@ jobs:
 
       - name: Publish result
         run: |
-          aws s3 cp ./out/summarised_results.json s3://my-labnotes-storage/{path}/summarised_results.json
-
           # Generate date path (YYYY/MM/DD format)
           DATE_PATH=$(date +"%Y/%m/%d")
           echo "Publishing to path: $DATE_PATH"
