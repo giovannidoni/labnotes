@@ -38,16 +38,24 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
         run: |
-          if [ -z "${{ secrets.OPENAI_API_KEY }}" ]; then
-            echo "❌ OPENAI_API_KEY secret is NOT configured in GitHub Secrets"
+          echo "Checking secrets availability..."
+          
+          # Check if OPENAI_API_KEY is available as environment variable
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "❌ OPENAI_API_KEY is NOT available as environment variable"
+            echo "Make sure the secret is configured in:"
+            echo "  1. Repository Settings > Secrets > Actions, OR"
+            echo "  2. Repository Settings > Environments > production > Secrets"
             exit 1
           else
-            echo "✅ OPENAI_API_KEY secret is configured (length: ${#OPENAI_API_KEY})"
+            echo "✅ OPENAI_API_KEY is available (length: ${#OPENAI_API_KEY})"
           fi
-          if [ -z "${{ secrets.FIRECRAWL_API_KEY }}" ]; then
-            echo "⚠️ FIRECRAWL_API_KEY secret is NOT configured (optional)"
+          
+          # Check FIRECRAWL_API_KEY (optional)
+          if [ -z "$FIRECRAWL_API_KEY" ]; then
+            echo "⚠️ FIRECRAWL_API_KEY is NOT configured (optional)"
           else
-            echo "✅ FIRECRAWL_API_KEY secret is configured"
+            echo "✅ FIRECRAWL_API_KEY is available (length: ${#FIRECRAWL_API_KEY})"
           fi
 
       - name: Test secret in Docker container
