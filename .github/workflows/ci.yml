@@ -36,7 +36,7 @@ jobs:
 
         run: |
 
-          docker run ${{ env.REPO }} uv run labnotes --hours 24 --top 2 --section $section --out ./out --log-level INFO
+          docker run ${{ env.REPO }} uv run labnotes --hours 24 --top 2 --section ai_research_and_models --out ./out --log-level INFO
 
           # docker run ${{ env.REPO }} 
           # -e OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}" \
