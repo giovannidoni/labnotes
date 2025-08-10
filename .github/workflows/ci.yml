@@ -75,7 +75,7 @@ jobs:
           ${{ env.REPO }} \
           /bin/bash  ./exec.sh ${{ inputs.top }}
 
-          ls -la ./out/
+          ls -la 
 
       - name: Publish result
         run: |
