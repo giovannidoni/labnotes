@@ -104,4 +104,4 @@ jobs:
           curl -X POST "https://backslashn.app.n8n.cloud/webhook-test/6af37fb4-0435-4e58-9f8b-3cd0f06b88d7" \
             -H "x-api-key: $WEBHOOK_TOKEN" \
             -H "Content-Type: application/json" \
-            -d '{"bucketName": "s3://labnotes-storage", "fileName": "${{ steps.publish.outputs.s3_file_path }}"'
+            -d '{"bucketName": "s3://labnotes-storage", "fileName": "${{ steps.publish.outputs.s3_file_path }}"}'
