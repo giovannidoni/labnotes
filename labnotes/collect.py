@@ -127,7 +127,7 @@ class ResultSummarisationService:
                             },
                             "required": ["item_number", "summary", "link", "reason_for_choice"],
                             "additionalProperties": False,
-                        }
+                        },
                     },
                     "digest": {
                         "type": "string",

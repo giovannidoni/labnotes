@@ -9,6 +9,10 @@ Follow this process:
 
 Select between 2 and 3 items as headlights, possible not from the same tematic areas, and create a bullet point resume in markdown format of salient finding across the other items, adding links to the articles.
 
+The digest section is in markdowns:
+- bold is with only one * surrounding words
+- links can go as their are without additiona formatting
+
 
 ```json
 {

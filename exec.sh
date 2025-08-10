@@ -3,7 +3,7 @@ sections=(
     "community_signals"
     "engineering_leadership_and_management"
 )
-TOP=${1:-2}
+TOP=${1:-100}
 echo $TOP
 for section in "${sections[@]}"
 do
@@ -24,3 +24,5 @@ do
 done
 
  uv run labnotes-collect --input ./out --log-level INFO
+
+  uv run labnotes-slack
