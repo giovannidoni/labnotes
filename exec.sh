@@ -3,7 +3,7 @@ sections=(
     "community_signals"
     "engineering_leadership_and_management"
 )
-TOP=${1:-100}
+TOP=${1:-2}
 echo $TOP
 for section in "${sections[@]}"
 do
