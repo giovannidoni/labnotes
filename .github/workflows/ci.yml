@@ -85,8 +85,8 @@ jobs:
           echo "Publishing to path: $DATE_PATH"
           
           # Check if file exists
-          if [ -f "./out/collect_summarised_results.json" ]; then
-            aws s3 cp ./out/collect_summarised_results.json s3://my-labnotes-storage/$DATE_PATH/summarised_results.json
+          if [ -f "./out/summarised_results.json" ]; then
+            aws s3 cp ./out/summarised_results.json s3://my-labnotes-storage/$DATE_PATH/summarised_results.json
             echo "s3_file_path=s3://my-labnotes-storage/$DATE_PATH/summarised_results.json" >> $GITHUB_OUTPUT
             echo "publish_success=true" >> $GITHUB_OUTPUT
           else
