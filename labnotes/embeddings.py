@@ -137,6 +137,14 @@ class OpenAIEmbeddingService:
         logger.info(f"Successfully generated {successful}/{len(items)} OpenAI embeddings")
         return result_embeddings
 
+class EmbeddingService:
+
+    def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
+        """Initialize the embedding service."""
+        self.model_name = model_name
+        self.model = None
+        self.initialized = False
+
 
 # class EmbeddingService:
 #     """Service for generating embeddings from text content using lightweight models."""
