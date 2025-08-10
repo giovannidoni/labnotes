@@ -1,5 +1,5 @@
 # Multi-stage build for lean Python image
-FROM python:3.11-slim as builder
+FROM python:3.11-slim AS builder
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -18,7 +18,7 @@ COPY pyproject.toml uv.lock ./
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
 # Install dependencies
-RUN uv sync && uv pip install --system --no-cache -e .
+RUN uv sync && uv pip install .
 
 # Runtime stage
 FROM python:3.11-slim
