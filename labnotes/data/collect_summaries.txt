@@ -14,7 +14,7 @@ Select between 2 and 3 items as headlights, possible not from the same tematic a
 {
   "picked_headlines ": [
     {
-        "item_number": [item numner],
+        "item_number": [item number],
         "summary": [summary],
         "link": [link],
         "reason_for_choice": [reason for picking this headline]
