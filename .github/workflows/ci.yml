@@ -57,6 +57,13 @@ jobs:
             echo "✅ FIRECRAWL_API_KEY is available (length: ${#FIRECRAWL_API_KEY})"
           fi
 
+          # Check WEBHOOK_TOKEN (optional)
+          if [ -z "$WEBHOOK_TOKEN" ]; then
+            echo "⚠️ WEBHOOK_TOKEN is NOT configured (optional)"
+          else
+            echo "✅ WEBHOOK_TOKEN is available (length: ${#WEBHOOK_TOKEN})"
+          fi
+
       - name: Run workflow
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -67,6 +74,8 @@ jobs:
           -e FIRECRAWL_API_KEY="$FIRECRAWL_API_KEY" \
           ${{ env.REPO }} \
           /bin/bash  ./exec.sh ${{ inputs.top }}
+
+          ls -la ./out/
 
       - name: Publish result
         run: |
