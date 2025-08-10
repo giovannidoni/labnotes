@@ -57,12 +57,12 @@ def setup_logging(level: str = "INFO") -> None:
     )
 
     # Set third-party loggers to WARNING to reduce noise
-    logging.getLogger("aiohttp").setLevel(logging.WARNING)
-    logging.getLogger("urllib3").setLevel(logging.WARNING)
-    logging.getLogger("requests").setLevel(logging.WARNING)
-    logging.getLogger("sentence_transformers").setLevel(logging.WARNING)
-    logging.getLogger("transformers").setLevel(logging.WARNING)
-    logging.getLogger("torch").setLevel(logging.WARNING)
+    logging.getLogger("aiohttp").setLevel(getattr(logging, level.upper(), None))
+    logging.getLogger("urllib3").setLevel(getattr(logging, level.upper(), None))
+    logging.getLogger("requests").setLevel(getattr(logging, level.upper(), None))
+    logging.getLogger("sentence_transformers").setLevel(getattr(logging, level.upper(), None))
+    logging.getLogger("transformers").setLevel(getattr(logging, level.upper(), None))
+    logging.getLogger("torch").setLevel(getattr(logging, level.upper(), None))
 
 
 def get_feed_sections() -> List[str]:
