@@ -64,5 +64,6 @@ test/
 .cache/
 
 # Project specific
-clean_digest.json
 *.bak
+out/
+

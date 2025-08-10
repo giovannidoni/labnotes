@@ -35,18 +35,20 @@ RUN useradd -m -u 1000 appuser
 WORKDIR /app
 
 # Copy Python packages from builder
-COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
-COPY --from=builder /usr/local/bin /usr/local/bin
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
+COPY --from=builder /app/.venv /app/.venv
 
 # Copy application code
 COPY --chown=appuser:appuser . .
 
-# Switch to non-root user
-USER appuser
+# # Switch to non-root user
+# USER appuser
 
 # Set environment variables
+ENV PATH="/app/.venv/bin:$PATH"
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
+ENV MALLOC_CONF=abort_conf:false
 
 # Default command
 CMD ["labnotes", "--help"]
