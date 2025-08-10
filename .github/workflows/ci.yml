@@ -12,7 +12,7 @@ on:
 jobs:
   build-test:
     runs-on: ubuntu-latest
-    environment: production  # Add this line to use environment secrets
+    environment: labnotes  # Add this line to use environment secrets
 
     env:
       REPO: labnotes
