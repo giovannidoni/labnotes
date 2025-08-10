@@ -32,6 +32,32 @@ jobs:
         run: |
           docker build -t ${{ env.REPO }} .
 
+      - name: Verify secrets are configured
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
+        run: |
+          if [ -z "${{ secrets.OPENAI_API_KEY }}" ]; then
+            echo "❌ OPENAI_API_KEY secret is NOT configured in GitHub Secrets"
+            exit 1
+          else
+            echo "✅ OPENAI_API_KEY secret is configured (length: ${#OPENAI_API_KEY})"
+          fi
+          if [ -z "${{ secrets.FIRECRAWL_API_KEY }}" ]; then
+            echo "⚠️ FIRECRAWL_API_KEY secret is NOT configured (optional)"
+          else
+            echo "✅ FIRECRAWL_API_KEY secret is configured"
+          fi
+
+      - name: Test secret in Docker container
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          docker run --rm \
+            -e OPENAI_API_KEY="$OPENAI_API_KEY" \
+            ${{ env.REPO }} \
+            /bin/bash -c 'if [ -z "$OPENAI_API_KEY" ]; then echo "❌ OPENAI_API_KEY NOT available in container"; exit 1; else echo "✅ OPENAI_API_KEY is available in container (length: ${#OPENAI_API_KEY})"; fi'
+
       - name: Run workflow
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
