@@ -79,6 +79,7 @@ jobs:
           ls -la ./out/
 
       - name: Publish result
+        id: publish
         run: |
           # Generate date path (YYYY/MM/DD format)
           DATE_PATH=$(date +"%Y/%m/%d")
