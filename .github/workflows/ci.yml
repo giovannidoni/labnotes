@@ -35,10 +35,13 @@ jobs:
       - name: Run workflow
 
         run: |
-          docker run ${{ env.REPO }} 
-          -e OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}" \
-          -e FIRECRAWL_API_KEY="${{ secrets.FIRECRAWL_API_KEY }}" \
-          ./exec.sh ${{ inputs.top }}
+
+          docker run ${{ env.REPO }} uv run labnotes --hours 24 --top 2 --section $section --out ./out --log-level INFO
+
+          # docker run ${{ env.REPO }} 
+          # -e OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}" \
+          # -e FIRECRAWL_API_KEY="${{ secrets.FIRECRAWL_API_KEY }}" \
+          # ./exec.sh ${{ inputs.top }}
 
       - name: Publish result
         if: ${{ env.DEPLOY_ENV == 'staging' || env.DEPLOY_ENV == 'prod' }} 
