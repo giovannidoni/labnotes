@@ -11,7 +11,7 @@ Select between 2 and 3 items as headlights, possible not from the same tematic a
 
 The digest section is in markdowns:
 - bold is with only one * surrounding words
-- links can go as their are without additiona formatting
+- links can go as their are without additiona formatting, do not put them between brakets
 
 
 ```json

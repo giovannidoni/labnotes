@@ -7,6 +7,10 @@ from labnotes.utils import load_input, setup_logging
 
 logger = logging.getLogger(__name__)
 
+head = """"Here's your daily AI research digest :robot_face:
+
+Headlines 💡:"""
+
 
 def get_article_block(item):
     """Generate a Slack block for an article."""
@@ -27,6 +31,20 @@ def get_article_block(item):
     }
 
 
+def get_article_block_text(item, i):
+    """Generate a Slack block for an article."""
+    return """
+{i}) {summary}: {link}
+    """.format(i=i, summary=item['summary'], link=item['link'])
+
+
+def get_digest_block_text(digest):
+    """Generate a Slack block for digest."""
+    return """Digest ⚙️🧠:\n
+{digest}
+    """.format(digest=digest.replace("*", ""))
+
+
 def get_digest_block(digest):
     """Generate a Slack block for digest."""
     return {
@@ -38,11 +56,7 @@ def get_digest_block(digest):
     }
 
 
-def _main():
-    """Main function to generate Slack message blocks."""
-    data = load_input("./out/summarised_results.json")
-    
-    # Build blocks array properly
+def get_slack_blocks(data):
     blocks = [
         {
             "type": "header",
@@ -70,6 +84,28 @@ def _main():
     blocks.append({"type": "divider"})
     blocks.append(get_digest_block(data["digest"]))
 
+    return blocks
+
+
+def get_linkedin_block(data):
+    """Generate a LinkedIn block for an article."""
+    blocks = head + "\n"
+    for i, item in enumerate(data["picked_headlines"]):
+        blocks += get_article_block_text(item, i + 1)
+
+    blocks += "\n"
+    blocks += get_digest_block_text(data["digest"])
+
+    return blocks
+
+
+def _main():
+    """Main function to generate Slack message blocks."""
+    data = load_input("./out/summarised_results.json")
+    
+    # Build blocks array properly
+    blocks = get_slack_blocks(data)
+
     # Send to Slack
     res = requests.post(
         "https://slack.com/api/chat.postMessage",
@@ -91,6 +127,10 @@ def _main():
             logger.error(f"Slack API error: {response_data.get('error')}")
     else:
         logger.error(f"HTTP error: {res.status_code} - {res.text}")
+
+    text = get_linkedin_block(data)
+
+    logger.info(f"LinkedIn post content generated: {text}")
 
 
 def main():

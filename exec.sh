@@ -25,4 +25,4 @@ done
 
  uv run labnotes-collect --input ./out --log-level INFO
 
-  uv run labnotes-slack
+  uv run labnotes-post

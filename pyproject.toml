@@ -44,7 +44,7 @@ labnotes = "labnotes.digest:main"
 labnotes-dedup = "labnotes.deduplicate:main"
 labnotes-summarise = "labnotes.summarise:main"
 labnotes-collect = "labnotes.collect:main"
-labnotes-slack = "labnotes.slack:main"
+labnotes-post = "labnotes.post:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
