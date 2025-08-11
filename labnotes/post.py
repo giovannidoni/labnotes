@@ -110,7 +110,7 @@ def _main():
     res = requests.post(
         "https://slack.com/api/chat.postMessage",
         headers={
-            "Authorization": f"Bearer {os.environ['SLACK_BOT_TOKEN']}", 
+            "Authorization": f"Bearer {os.getenv('SLACK_BOT_TOKEN')}", 
             "Content-Type": "application/json; charset=utf-8"
         },
         json={
