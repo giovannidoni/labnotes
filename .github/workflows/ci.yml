@@ -53,14 +53,16 @@ jobs:
           
           # Check FIRECRAWL_API_KEY (optional)
           if [ -z "$FIRECRAWL_API_KEY" ]; then
-            echo "⚠️ FIRECRAWL_API_KEY is NOT configured (optional)"
+            echo "⚠️ FIRECRAWL_API_KEY is NOT configured"
+            exit 1
           else
             echo "✅ FIRECRAWL_API_KEY is available (length: ${#FIRECRAWL_API_KEY})"
           fi
 
           # Check WEBHOOK_TOKEN (optional)
           if [ -z "$WEBHOOK_TOKEN" ]; then
-            echo "⚠️ WEBHOOK_TOKEN is NOT configured (optional)"
+            echo "⚠️ WEBHOOK_TOKEN is NOT configured"
+            exit 1
           else
             echo "✅ WEBHOOK_TOKEN is available (length: ${#WEBHOOK_TOKEN})"
           fi
@@ -68,7 +70,8 @@ jobs:
 
           # Check SLACK_BOT_TOKEN (optional)
           if [ -z "$SLACK_BOT_TOKEN" ]; then
-            echo "⚠️ SLACK_BOT_TOKEN is NOT configured (optional)"
+            echo "⚠️ SLACK_BOT_TOKEN is NOT configured"
+            exit 1
           else
             echo "✅ SLACK_BOT_TOKEN is available (length: ${#SLACK_BOT_TOKEN})"
           fi
