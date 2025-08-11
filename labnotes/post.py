@@ -7,7 +7,7 @@ from labnotes.utils import load_input, setup_logging
 
 logger = logging.getLogger(__name__)
 
-head = """"Here's your daily AI research digest 🤖
+head = """"Here's your daily AI digest 🤖
 
 Headlines 💡:"""
 
