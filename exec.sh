@@ -23,6 +23,6 @@ do
     uv run labnotes-summarise --input ./out --section $section --log-level INFO
 done
 
- uv run labnotes-collect --input ./out --log-level INFO
+uv run labnotes-collect --input ./out --log-level INFO
 
-  uv run labnotes-post
+uv run labnotes-post

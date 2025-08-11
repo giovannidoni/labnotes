@@ -7,7 +7,7 @@ from labnotes.utils import load_input, setup_logging
 
 logger = logging.getLogger(__name__)
 
-head = """"Here's your daily AI research digest :robot_face:
+head = """"Here's your daily AI research digest 🤖
 
 Headlines 💡:"""
 
@@ -99,14 +99,8 @@ def get_linkedin_block(data):
     return blocks
 
 
-def _main():
-    """Main function to generate Slack message blocks."""
-    data = load_input("./out/summarised_results.json")
-    
-    # Build blocks array properly
-    blocks = get_slack_blocks(data)
-
-    # Send to Slack
+def post_to_slack(blocks):
+    """Post the generated blocks to Slack."""
     res = requests.post(
         "https://slack.com/api/chat.postMessage",
         headers={
@@ -128,7 +122,70 @@ def _main():
     else:
         logger.error(f"HTTP error: {res.status_code} - {res.text}")
 
+
+def post_to_linkedin(blocks):
+    """Post the generated blocks to Slack."""
+    headers = {
+        "Authorization": f"Bearer {ACCESS_TOKEN}",
+        "Content-Type": "application/json",
+        "X-Restli-Protocol-Version": "2.0.0"        
+    }
+
+    payload = {
+        "author": PERSON_URN,
+        "lifecycleState": "PUBLISHED",
+        "specificContent": {
+            "com.linkedin.ugc.ShareContent": {
+                "shareCommentary": {
+                    "text": blocks
+                },
+                "shareMediaCategory": "NONE"
+            }
+        },
+        "visibility": {
+            "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"
+        }
+    }
+
+    res = requests.post(
+        "https://slack.com/api/chat.postMessage",
+        headers={
+            "Authorization": f"Bearer {os.getenv('SLACK_BOT_TOKEN')}", 
+            "Content-Type": "application/json; charset=utf-8"
+        },
+        json={
+            "channel": "C09A405DMPB", 
+            "blocks": blocks  # Pass blocks array directly
+        }
+    )
+    
+    res = requests.post("https://api.linkedin.com/v2/ugcPosts", headers=headers, json=payload)
+
+    if res.status_code == 200:
+        response_data = res.json()
+        if response_data.get("ok"):
+            logger.info("Message sent successfully to LinkedIn")
+        else:
+            logger.error(f"Slack API error: {response_data.get('error')}")
+    else:
+        logger.error(f"HTTP error: {res.status_code} - {res.text}")
+
+
+def _main():
+    """Main function to generate Slack message blocks."""
+    data = load_input("./out/summarised_results.json")
+    
+    # Build blocks array properly
+    blocks = get_slack_blocks(data)
+
+    # Send to Slack
+    post_to_slack(blocks)
+
+    # Build block for LinkedIn post
     text = get_linkedin_block(data)
+
+    # Send to LinkedIn
+    # post_to_linkedin(blocks)
 
     logger.info(f"LinkedIn post content generated: {text}")
 
