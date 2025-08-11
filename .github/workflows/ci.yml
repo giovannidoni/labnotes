@@ -65,10 +65,19 @@ jobs:
             echo "✅ WEBHOOK_TOKEN is available (length: ${#WEBHOOK_TOKEN})"
           fi
 
+
+          # Check SLACK_BOT_TOKEN (optional)
+          if [ -z "$SLACK_BOT_TOKEN" ]; then
+            echo "⚠️ SLACK_BOT_TOKEN is NOT configured (optional)"
+          else
+            echo "✅ SLACK_BOT_TOKEN is available (length: ${#SLACK_BOT_TOKEN})"
+          fi
+
       - name: Run workflow
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
         run: |
           docker run -v $(pwd)/out:/app/out \
           -e OPENAI_API_KEY="$OPENAI_API_KEY" \
