@@ -126,11 +126,11 @@ def post_to_slack(blocks):
 def post_to_linkedin(blocks):
     """Post the generated blocks to Slack."""
     headers = {
-        "Authorization": f"Bearer {ACCESS_TOKEN}",
+        "Authorization": f"Bearer {os.getenv('LINKEDIN_API_TOKEN')}",
         "Content-Type": "application/json",
         "X-Restli-Protocol-Version": "2.0.0"        
     }
-
+    PERSON_URN = "urn:li:person:YOUR_PERSON_URN"
     payload = {
         "author": PERSON_URN,
         "lifecycleState": "PUBLISHED",
@@ -149,14 +149,8 @@ def post_to_linkedin(blocks):
 
     res = requests.post(
         "https://slack.com/api/chat.postMessage",
-        headers={
-            "Authorization": f"Bearer {os.getenv('SLACK_BOT_TOKEN')}", 
-            "Content-Type": "application/json; charset=utf-8"
-        },
-        json={
-            "channel": "C09A405DMPB", 
-            "blocks": blocks  # Pass blocks array directly
-        }
+        headers=headers,
+        json=payload
     )
     
     res = requests.post("https://api.linkedin.com/v2/ugcPosts", headers=headers, json=payload)
