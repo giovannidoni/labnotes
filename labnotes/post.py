@@ -7,7 +7,7 @@ from labnotes.utils import load_input, setup_logging
 
 logger = logging.getLogger(__name__)
 
-head = """"Here's your daily AI digest 🤖
+head = """"Here's your daily AI digest 🤖, available now also at giovannidoni.github.io
 
 Headlines 💡:"""
 
@@ -132,7 +132,7 @@ def post_to_linkedin(blocks):
     }
     PERSON_URN = "urn:li:person:YOUR_PERSON_URN"
     payload = {
-        "author": PERSON_URN,
+        "author": os.getenv('PERSON_URN'),
         "lifecycleState": "PUBLISHED",
         "specificContent": {
             "com.linkedin.ugc.ShareContent": {
@@ -179,7 +179,7 @@ def _main():
     text = get_linkedin_block(data)
 
     # Send to LinkedIn
-    # post_to_linkedin(blocks)
+    post_to_linkedin(blocks)
 
     logger.info(f"LinkedIn post content generated: {text}")
 
