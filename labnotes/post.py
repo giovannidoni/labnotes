@@ -125,7 +125,6 @@ def post_to_slack(blocks):
 
 def post_to_linkedin(blocks):
     """Post the generated blocks to LinkedIn."""
-    print(os.getenv('LINKEDIN_API_TOKEN'))
     headers = {
         "Authorization": f"Bearer {os.getenv('LINKEDIN_API_TOKEN')}",
         "Content-Type": "application/json",
