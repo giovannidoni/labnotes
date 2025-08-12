@@ -3,6 +3,7 @@ import traceback
 import logging
 import sys
 import os
+import datetime.datatime as dt
 from labnotes.utils import load_input, setup_logging
 
 logger = logging.getLogger(__name__)
@@ -167,13 +168,14 @@ def _main():
     blocks = get_slack_blocks(data)
 
     # Send to Slack
-    # post_to_slack(blocks)
+    post_to_slack(blocks)
 
     # Build block for LinkedIn post
     text = get_linkedin_block(data)
 
     # Send to LinkedIn
-    post_to_linkedin(blocks)
+    if dt.now().weekday() in [2, 3, 4, 6]:
+        post_to_linkedin(text)
 
     logger.info(f"LinkedIn post content generated: {text}")
 
