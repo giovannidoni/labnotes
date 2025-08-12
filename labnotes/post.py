@@ -125,13 +125,15 @@ def post_to_slack(blocks):
 
 def post_to_linkedin(blocks):
     """Post the generated blocks to LinkedIn."""
+    print(os.getenv('LINKEDIN_API_TOKEN'))
     headers = {
         "Authorization": f"Bearer {os.getenv('LINKEDIN_API_TOKEN')}",
         "Content-Type": "application/json",
         "X-Restli-Protocol-Version": "2.0.0"        
     }
+    PERSON_URN = f"urn:li:person:{os.getenv('PERSON_URN')}"
     payload = {
-        "author": os.getenv('PERSON_URN'),
+        "author": PERSON_URN,
         "lifecycleState": "PUBLISHED",
         "specificContent": {
             "com.linkedin.ugc.ShareContent": {
