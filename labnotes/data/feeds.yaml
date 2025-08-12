@@ -15,6 +15,10 @@ community_signals:
 - https://lobste.rs/rss
 - https://www.reddit.com/r/DeepLearningPapers/.rss
 - https://www.reddit.com/r/ArtificialInteligence/.rss
+- https://www.latent.space/feed
+- https://eugeneyan.com/rss/
+- https://huyenchip.com/feed.xml
+- https://mlops.community/feed/
 engineering_leadership_and_management:
 - https://newsletter.pragmaticengineer.com/feed
 - https://blog.pragmaticengineer.com/rss
@@ -24,4 +28,4 @@ engineering_leadership_and_management:
 - https://queue.acm.org/rss/feeds/queuecontent.xml
 - http://feeds.feedburner.com/HighScalability
 - https://martinfowler.com/feed.atom
--
+- https://www.oreilly.com/radar/topics/ai-ml/feed/

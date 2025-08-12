@@ -8,7 +8,9 @@ Follow this evaluation process:
 - decide on its relevance to be use of daily headline
 
 Subsenquently, it the selection process:
-- select between 2 and 4 items as headlights: make sure there is a variaety of topic, to not choose only research topics, include posts on product and engineering.
+- select between 2 and 4 items as headlights
+- make sure items for highlights contains is a variaety of topics, do not not choose only research topics, you MUST include posts on products and engineering
+- max 2 itmes for research artifles in the headlight section
 - create a bullet point resume in markdown format of salient finding across the other items, adding links to the articles; make sure there is a wide mix of topics and application.
 
 The digest section is in markdowns:
