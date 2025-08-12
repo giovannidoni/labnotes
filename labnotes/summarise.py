@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 def map_novelty_score_to_int(score_text: str) -> int:
     """Map novelty score text to integer (1-5)."""
-    score_mapping = {"questionable": 1, "high": 2, "very high": 3}
+    score_mapping = {"average": 1, "high": 2, "very high": 3}
 
     # Normalize the input
     normalized_score = score_text.lower().strip()
@@ -121,7 +121,7 @@ class SummarisationService:
                     },
                     "_novelty_score": {
                         "type": "string",
-                        "enum": ["very low", "low", "average", "high", "very high"],
+                        "enum": ["questionable", "high", "very high"],
                         "description": "Novelty/originality score of the article",
                     },
                 },
