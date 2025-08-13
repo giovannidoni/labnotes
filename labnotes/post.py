@@ -3,7 +3,7 @@ import traceback
 import logging
 import sys
 import os
-import datetime.datatime as dt
+import datetime.datetime as dt
 from labnotes.utils import load_input, setup_logging
 
 logger = logging.getLogger(__name__)
