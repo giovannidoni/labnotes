@@ -78,12 +78,12 @@ jobs:
             echo "✅ SLACK_BOT_TOKEN is available (length: ${#SLACK_BOT_TOKEN})"
           fi
 
-          # Check LINKEDIN_API_TOKEN= (optional)
-          if [ -z "$LINKEDIN_API_TOKEN=" ]; then
-            echo "⚠️ LINKEDIN_API_TOKEN= is NOT configured"
+          # Check LINKEDIN_API_TOKEN (optional)
+          if [ -z "$LINKEDIN_API_TOKEN" ]; then
+            echo "⚠️ LINKEDIN_API_TOKEN is NOT configured"
             exit 1
           else
-            echo "✅ LINKEDIN_API_TOKEN= is available (length: ${#LINKEDIN_API_TOKEN=})"
+            echo "✅ LINKEDIN_API_TOKEN is available (length: ${#LINKEDIN_API_TOKEN})"
           fi
 
       - name: Run workflow
