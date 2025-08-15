@@ -24,5 +24,3 @@ do
 done
 
 uv run labnotes-collect --input ./out --log-level INFO
-
-uv run labnotes-post

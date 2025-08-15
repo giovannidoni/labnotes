@@ -102,8 +102,8 @@ jobs:
 
           ls -la ./out/
 
-      - name: Publish result
-        id: publish
+      - name: Save result
+        id: save
         run: |
           # Generate date path (YYYY/MM/DD format)
           DATE_PATH=$(date +"%Y/%m/%d")
@@ -119,6 +119,20 @@ jobs:
             ls -la ./out/
             exit 1  # This will mark the step as failed
           fi
+
+      - name: Publish result
+        id: publish
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          LINKEDIN_API_TOKEN: ${{ secrets.LINKEDIN_API_TOKEN }}
+          PERSON_URN: ${{ secrets.PERSON_URN }}
+        run: |
+          docker run -v $(pwd)/out:/app/out \
+          -e LINKEDIN_API_TOKEN="$LINKEDIN_API_TOKEN" \
+          -e SLACK_BOT_TOKEN="$SLACK_BOT_TOKEN" \
+          -e PERSON_URN="$PERSON_URN" \
+          ${{ env.REPO }} \
+          /bin/bash uv run labnotes-post
 
       - name: Trigger hook
         env:
