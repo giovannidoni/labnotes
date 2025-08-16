@@ -171,14 +171,14 @@ def _main():
     blocks = get_slack_blocks(data)
 
     # Send to Slack
-    # post_to_slack(blocks)
+    post_to_slack(blocks)
 
     # Build block for LinkedIn post
     text = get_linkedin_block(data)
 
     # Send to LinkedIn
-    # if dt.now().weekday() in [1, 3, 5]:
-    #     post_to_linkedin(text)
+    if dt.now().weekday() in [1, 3, 5]:
+        post_to_linkedin(text)
 
     logger.info(f"LinkedIn post content generated: {text}")
 
