@@ -132,7 +132,7 @@ jobs:
           -e SLACK_BOT_TOKEN="$SLACK_BOT_TOKEN" \
           -e PERSON_URN="$PERSON_URN" \
           ${{ env.REPO }} \
-          /bin/bash uv run labnotes-post
+          uv run labnotes-post
 
       - name: Trigger hook
         env:
