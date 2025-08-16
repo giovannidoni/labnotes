@@ -8,9 +8,12 @@ from labnotes.utils import load_input, setup_logging
 
 logger = logging.getLogger(__name__)
 
-head = """"Here's your daily AI digest 🤖, available now also at giovannidoni.github.io
+head = """🚨 𝗗𝗮𝗶𝗹𝘆 𝗔𝗜 𝗗𝗶𝗴𝗲𝘀𝘁 🤖
+𝘢𝘷𝘢𝘪𝘭𝘢𝘣𝘭𝘦 𝘢𝘭𝘴𝘰 𝘢𝘵 ➡️ 𝘨𝘪𝘰𝘷𝘢𝘯𝘯𝘪𝘥𝘰𝘯𝘪.𝘨𝘪𝘵𝘩𝘶𝘣.𝘪𝘰 🧑‍💻
 
-Headlines 💡:"""
+👉 Which one do you find most promising?
+
+💡 𝗛𝗲𝗮𝗱𝗹𝗶𝗻𝗲𝘀:"""
 
 
 def get_article_block(item):
@@ -41,7 +44,7 @@ def get_article_block_text(item, i):
 
 def get_digest_block_text(digest):
     """Generate a Slack block for digest."""
-    return """Digest ⚙️🧠:\n
+    return """⚙️🧠 𝗗𝗶𝗴𝗲𝘀𝘁:\n
 {digest}
     """.format(digest=digest.replace("*", ""))
 
@@ -168,14 +171,14 @@ def _main():
     blocks = get_slack_blocks(data)
 
     # Send to Slack
-    post_to_slack(blocks)
+    # post_to_slack(blocks)
 
     # Build block for LinkedIn post
     text = get_linkedin_block(data)
 
     # Send to LinkedIn
-    if dt.now().weekday() in [1, 3, 5]:
-        post_to_linkedin(text)
+    # if dt.now().weekday() in [1, 3, 5]:
+    #     post_to_linkedin(text)
 
     logger.info(f"LinkedIn post content generated: {text}")
 
