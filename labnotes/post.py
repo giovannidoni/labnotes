@@ -177,7 +177,7 @@ def _main():
     text = get_linkedin_block(data)
 
     # Send to LinkedIn
-    if dt.now().weekday() in [1, 3, 5]:
+    if dt.now().weekday() in [0, 1, 2, 3, 4]:
         post_to_linkedin(text)
 
     logger.info(f"LinkedIn post content generated: {text}")
