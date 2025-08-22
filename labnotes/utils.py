@@ -96,9 +96,9 @@ def setup_logging(level: str = "INFO") -> None:
     logging.getLogger("torch").setLevel(getattr(logging, level.upper(), None))
 
 
-def get_feed_sections() -> List[str]:
+def get_feed_sections(pipeline: str = "website") -> List[str]:
     """Get the list of feed sections from feeds.yaml."""
-    feeds_file = Path(__file__).parent / "data" / "feeds.yaml"
+    feeds_file = Path(__file__).parent / "settings" / pipeline / "feeds.yaml"
     try:
         with open(feeds_file, "r", encoding="utf-8") as f:
             feeds_data = yaml.safe_load(f)

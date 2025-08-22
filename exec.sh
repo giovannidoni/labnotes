@@ -1,3 +1,4 @@
+ENV_FOR_DYNACONF="website"
 sections=(
     "ai_research_and_models"
     "community_signals"

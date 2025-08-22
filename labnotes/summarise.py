@@ -17,6 +17,7 @@ import traceback
 
 from labnotes.utils import setup_logging, save_to_supabase
 from labnotes.utils import save_output, load_input, find_most_recent_file
+from labnotes.settings import settings
 
 logger = logging.getLogger(__name__)
 
@@ -267,7 +268,7 @@ async def main_async():
         save_output(summarised, output_file)
 
         # Save results
-        if len(summarised) > 0:
+        if len(summarised) > 0 and settings.summarise.save_to_supabase:
             save_to_supabase(summarised, "raw_articles")
 
         # Report statistics

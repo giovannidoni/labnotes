@@ -13,6 +13,8 @@ from firecrawl import FirecrawlApp
 from labnotes.utils import setup_logging, write_file
 from labnotes.scoring import scoring
 from labnotes.scraping import ScrapingMethod, domain_of, scrape_article_content
+from labnotes.settings import settings
+
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -404,8 +406,6 @@ async def render_outputs(items: List[Dict[str, Any]], section: str, out_dir: str
 
 async def main_async():
     parser = argparse.ArgumentParser(description="AI Daily Digest (async)")
-    parser.add_argument("--feeds", default="labnotes/data/feeds.yaml", help="YAML file with feed groups")
-    parser.add_argument("--keywords", default="labnotes/data/keywords.json", help="JSON file with keyword scoring")
     parser.add_argument("--hours", type=int, default=24, help="lookback window in hours")
     parser.add_argument("--top", type=int, default=50, help="top N items to keep")
     parser.add_argument("--out", default="./out", help="output directory")
@@ -431,13 +431,13 @@ async def main_async():
     logger.debug(f"Arguments: {vars(args)}")
 
     try:
-        with open(args.feeds, "r", encoding="utf-8") as f:
+        with open(settings.feed_file, "r", encoding="utf-8") as f:
             feeds = yaml.safe_load(f)
-        logger.info(f"Loaded {len(feeds)} feed groups from {args.feeds}")
+        logger.info(f"Loaded {len(feeds)} feed groups from {settings.feed_file}")
 
-        with open(args.keywords, "r", encoding="utf-8") as f:
+        with open(settings.keywords_file, "r", encoding="utf-8") as f:
             kw = json.load(f)
-        logger.info(f"Loaded keywords configuration from {args.keywords}")
+        logger.info(f"Loaded keywords configuration from {settings.keywords_file}")
     except Exception as e:
         error = traceback.format_exc()
         logger.error(f"Failed to load configuration files: {error}")

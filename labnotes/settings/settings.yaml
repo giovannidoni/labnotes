@@ -1,0 +1,17 @@
+default:
+  feed_file: "@format labnotes/settings/{this.current_env}/feeds.yaml"
+  keywords_file: "@format labnotes/settings/{this.current_env}/keywords.json"
+
+website:
+  dynaconf_merge: true
+  digest:
+    top: 5
+    hours: 24
+  summarise:
+    save_to_supabase: true
+
+mountainmap:
+  dynaconf_merge: true
+  digest:
+    top: 5
+    hours: 24

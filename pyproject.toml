@@ -18,6 +18,7 @@ dependencies = [
   "numpy>=2.2.6",
   "openai>=1.99.6",
   "supabase>=2.18.1",
+  "dynaconf>=3.2.11",
 ]
 
 [build-system]

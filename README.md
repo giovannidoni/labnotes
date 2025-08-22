@@ -76,7 +76,7 @@ python -m labnotes.opml_to_yaml feeds.opml -o labnotes/data/feeds.yaml
 ```
 
 ### Keywords Configuration
-Scoring keywords in `labnotes/data/keywords.json`:
+Scoring keywords in `labnotes/settings/website/keywords.json`:
 ```json
 {
   "must": ["AI", "machine learning", "LLM"],
