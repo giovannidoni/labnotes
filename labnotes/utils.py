@@ -44,11 +44,13 @@ def save_to_supabase(items: Dict, table_name: str) -> None:
     rows = [{"rec": obj} for obj in items]
 
     # Insert (or upsert if you created unique index on link+group)
-    response = supabase.table(table_name).insert(rows).execute()
-    if response.error:
-        logger.info(f"Failed to insert items into Supabase: {response.error}")
-    else:
+    try:
+        response = supabase.table(table_name).insert(rows).execute()
+        response.raise_when_api_error()  # <- raises if insert failed
         logger.info(f"Inserted {len(items)} items into Supabase")
+    except Exception as _:
+        error = traceback.format_exc()
+        logger.info(f"Failed to insert items into Supabase: {error}")
 
 
 def find_most_recent_file(directory: Path, pattern: str = "*.json") -> Path:
