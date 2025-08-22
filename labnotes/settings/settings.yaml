@@ -10,6 +10,9 @@ website:
   summarise:
     save_to_supabase: true
     table_name: "raw_articles"
+  publish:
+    slack: true
+    linkedin: true
 
 mountainmap:
   dynaconf_merge: true

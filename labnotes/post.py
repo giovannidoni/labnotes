@@ -4,7 +4,9 @@ import logging
 import sys
 import os
 from datetime import datetime as dt
+
 from labnotes.utils import load_input, setup_logging
+from labnotes.settings import settings
 
 logger = logging.getLogger(__name__)
 
@@ -135,13 +137,14 @@ def _main():
     blocks = get_slack_blocks(data)
 
     # Send to Slack
-    post_to_slack(blocks)
+    if settings.publish.slack:
+        post_to_slack(blocks)
 
     # Build block for LinkedIn post
     text = get_linkedin_block(data)
 
     # Send to LinkedIn
-    if dt.now().day % 2 == 1:
+    if dt.now().day % 2 == 1 and settings.publish.linkedin:
         post_to_linkedin(text)
 
     logger.info(f"LinkedIn post content generated: {text}")
