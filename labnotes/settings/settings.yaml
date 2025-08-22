@@ -9,6 +9,7 @@ website:
     hours: 24
   summarise:
     save_to_supabase: true
+    table_name: "raw_articles"
 
 mountainmap:
   dynaconf_merge: true

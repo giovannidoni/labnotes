@@ -269,7 +269,7 @@ async def main_async():
 
         # Save results
         if len(summarised) > 0 and settings.summarise.save_to_supabase:
-            save_to_supabase(summarised, "raw_articles")
+            save_to_supabase(summarised,  settings.summarise.table_name)
 
         # Report statistics
         summary_count = sum(1 for item in summarised if item.get("summary"))
