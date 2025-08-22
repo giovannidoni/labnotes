@@ -45,8 +45,7 @@ def save_to_supabase(items: Dict, table_name: str) -> None:
 
     # Insert (or upsert if you created unique index on link+group)
     try:
-        response = supabase.table(table_name).insert(rows).execute()
-        response.raise_when_api_error()  # <- raises if insert failed
+        _ = supabase.table(table_name).insert(rows).execute()
         logger.info(f"Inserted {len(items)} items into Supabase")
     except Exception as _:
         error = traceback.format_exc()
