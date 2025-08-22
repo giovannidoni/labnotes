@@ -34,7 +34,7 @@ def map_novelty_score_to_int(score_text: str) -> int:
 
 def load_prompt_template(prompt_type) -> str:
     """Load the summarisation prompt template."""
-    prompt_file = Path(__file__).parent / "data" / f"{prompt_type}.txt"
+    prompt_file = Path(__file__).parent / "prompts" / f"{prompt_type}.txt"
     try:
         with open(prompt_file, "r", encoding="utf-8") as f:
             return f.read().strip()

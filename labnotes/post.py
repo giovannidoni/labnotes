@@ -20,18 +20,8 @@ def get_article_block(item):
     """Generate a Slack block for an article."""
     return {
         "type": "section",
-        "text": {
-            "type": "mrkdwn",
-            "text": f"*{item['summary']}*"
-        },
-        "accessory": {
-            "type": "button",
-            "text": {
-                "type": "plain_text",
-                "text": "Read More"
-            },
-            "url": item['link']
-        }
+        "text": {"type": "mrkdwn", "text": f"*{item['summary']}*"},
+        "accessory": {"type": "button", "text": {"type": "plain_text", "text": "Read More"}, "url": item["link"]},
     }
 
 
@@ -39,7 +29,7 @@ def get_article_block_text(item, i):
     """Generate a Slack block for an article."""
     return """
 {i}) {summary}: {link}
-    """.format(i=i, summary=item['summary'], link=item['link'])
+    """.format(i=i, summary=item["summary"], link=item["link"])
 
 
 def get_digest_block_text(digest):
@@ -51,39 +41,20 @@ def get_digest_block_text(digest):
 
 def get_digest_block(digest):
     """Generate a Slack block for digest."""
-    return {
-        "type": "section",
-        "text": {
-            "type": "mrkdwn",
-            "text": f"*📋 Digest:*\n{digest}"
-        }
-    }
+    return {"type": "section", "text": {"type": "mrkdwn", "text": f"*📋 Digest:*\n{digest}"}}
 
 
 def get_slack_blocks(data):
     blocks = [
-        {
-            "type": "header",
-            "text": {
-                "type": "plain_text",
-                "text": "Labnotes 📰",
-                "emoji": True
-            }
-        },
-        {
-            "type": "section",
-            "text": {
-                "type": "mrkdwn",
-                "text": "Here's your daily AI research digest :robot_face:"
-            }
-        },
-        {"type": "divider"}
+        {"type": "header", "text": {"type": "plain_text", "text": "Labnotes 📰", "emoji": True}},
+        {"type": "section", "text": {"type": "mrkdwn", "text": "Here's your daily AI research digest :robot_face:"}},
+        {"type": "divider"},
     ]
-    
+
     # Add article blocks
     for item in data["picked_headlines"]:
         blocks.append(get_article_block(item))
-    
+
     # Add digest
     blocks.append({"type": "divider"})
     blocks.append(get_digest_block(data["digest"]))
@@ -108,15 +79,15 @@ def post_to_slack(blocks):
     res = requests.post(
         "https://slack.com/api/chat.postMessage",
         headers={
-            "Authorization": f"Bearer {os.getenv('SLACK_BOT_TOKEN')}", 
-            "Content-Type": "application/json; charset=utf-8"
+            "Authorization": f"Bearer {os.getenv('SLACK_BOT_TOKEN')}",
+            "Content-Type": "application/json; charset=utf-8",
         },
         json={
-            "channel": "C09A405DMPB", 
-            "blocks": blocks  # Pass blocks array directly
-        }
+            "channel": "C09A405DMPB",
+            "blocks": blocks,  # Pass blocks array directly
+        },
     )
-    
+
     if res.status_code == 200:
         response_data = res.json()
         if response_data.get("ok"):
@@ -132,25 +103,18 @@ def post_to_linkedin(blocks):
     headers = {
         "Authorization": f"Bearer {os.getenv('LINKEDIN_API_TOKEN')}",
         "Content-Type": "application/json",
-        "X-Restli-Protocol-Version": "2.0.0"        
+        "X-Restli-Protocol-Version": "2.0.0",
     }
     PERSON_URN = f"urn:li:person:{os.getenv('PERSON_URN')}"
     payload = {
         "author": PERSON_URN,
         "lifecycleState": "PUBLISHED",
         "specificContent": {
-            "com.linkedin.ugc.ShareContent": {
-                "shareCommentary": {
-                    "text": blocks
-                },
-                "shareMediaCategory": "NONE"
-            }
+            "com.linkedin.ugc.ShareContent": {"shareCommentary": {"text": blocks}, "shareMediaCategory": "NONE"}
         },
-        "visibility": {
-            "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"
-        }
+        "visibility": {"com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"},
     }
-    
+
     res = requests.post("https://api.linkedin.com/v2/ugcPosts", headers=headers, json=payload)
 
     if res.status_code == 200:
@@ -166,7 +130,7 @@ def post_to_linkedin(blocks):
 def _main():
     """Main function to generate Slack message blocks."""
     data = load_input("./out/summarised_results.json")
-    
+
     # Build blocks array properly
     blocks = get_slack_blocks(data)
 

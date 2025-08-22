@@ -37,6 +37,7 @@ def load_input(filepath: str) -> List[Dict[str, Any]]:
         logger.error(f"Failed to load JSON file {filepath}: {error}")
         raise
 
+
 def save_to_supabase(items: Dict, table_name: str) -> None:
     """Save items to Supabase database."""
     url = os.getenv("SUPABASE_URL")

@@ -1,4 +1,3 @@
-
 from typing import Dict, Any
 import logging
 
@@ -63,7 +62,6 @@ def scoring(items: list[Dict[str, Any]], audience_kw: Dict[str, Any], top: int):
         scores = score_item_dual(it, audience_kw)
         it["_score"] = 0
         for k in audience_kw:
-            
             it[f"_score_{k}"] = scores.get(k, {}).get("score", 0)
             it["_score"] += it[f"_score_{k}"]
 
