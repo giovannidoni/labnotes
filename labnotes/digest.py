@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-import argparse, datetime, json, re, sys, time, asyncio, os, logging
-from urllib.parse import urlparse
+import argparse, datetime, json, re, sys, asyncio, os, logging
 from typing import List, Dict, Any, Optional
 from pathlib import Path
 import traceback
@@ -9,12 +8,11 @@ import feedparser
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 import yaml
 import aiohttp
-import aiofiles
-from bs4 import BeautifulSoup
 from firecrawl import FirecrawlApp
 
-from labnotes.utils import setup_logging
-from labnotes.scraping import ScrapingMethod, domain_of, is_pdf_url, scrape_article_content, follow_aggregator_link
+from labnotes.utils import setup_logging, write_file
+from labnotes.scoring import scoring
+from labnotes.scraping import ScrapingMethod, domain_of, scrape_article_content
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -58,68 +56,6 @@ def within_hours(entry, hours: int) -> bool:
     else:
         logger.debug(f"No valid date found for entry, excluding from results")
     return within_range
-
-
-def score_item_for_audience(item: Dict[str, Any], audience_kw: Dict[str, Any], audience_name: str) -> Dict[str, Any]:
-    """Score an item for a specific audience and return detailed scoring info."""
-    text = f"{item['title']} {item.get('summary', '')} {item.get('content', '')}".lower()
-    score = 0
-
-    must_matches = []
-    for k in audience_kw.get("must", []):
-        if k and k.lower() in text:
-            score += 2
-            must_matches.append(k)
-
-    nice_matches = []
-    for k in audience_kw.get("nice", []):
-        if k and k.lower() in text:
-            score += 1
-            nice_matches.append(k)
-
-    src = item.get("source", "")
-    source_adjustments = []
-    if any(d in src for d in audience_kw.get("source_weight", {}).get("plus", [])):
-        score += 1
-        source_adjustments.append("+1 (source bonus)")
-    if any(d in src for d in audience_kw.get("source_weight", {}).get("minus", [])):
-        score -= 1
-        source_adjustments.append("-1 (source penalty)")
-
-    logger.debug(
-        f"Scoring item '{item['title'][:50]}...' for {audience_name}: score={score}, "
-        f"must_matches={must_matches}, nice_matches={nice_matches}, "
-        f"source_adjustments={source_adjustments}"
-    )
-
-    return {
-        "score": score,
-        "must_matches": must_matches,
-        "nice_matches": nice_matches,
-        "source_adjustments": source_adjustments,
-    }
-
-
-def score_item_dual(item: Dict[str, Any], kw: Dict[str, Any]) -> Dict[str, Any]:
-    """Score an item for both engineers and managers, returning detailed scores."""
-    scores = {}
-
-    if "audiences" in kw:
-        # New multi-audience format
-        for audience_name, audience_kw in kw["audiences"].items():
-            scores[audience_name] = score_item_for_audience(item, audience_kw, audience_name)
-    else:
-        # Legacy format - treat as engineers
-        scores["engineers"] = score_item_for_audience(item, kw, "engineers")
-        scores["managers"] = {"score": 0, "must_matches": [], "nice_matches": [], "source_adjustments": []}
-
-    return scores
-
-
-def score_item(item: Dict[str, Any], kw: Dict[str, Any]) -> int:
-    """Legacy scoring function - returns engineers score for backward compatibility."""
-    scores = score_item_dual(item, kw)
-    return scores.get("engineers", {}).get("score", 0)
 
 
 def extract_content(entry) -> str:
@@ -466,18 +402,6 @@ async def render_outputs(items: List[Dict[str, Any]], section: str, out_dir: str
         logger.warning("No output formats specified")
 
 
-async def write_file(filepath: str, content: str) -> None:
-    """Write content to file asynchronously."""
-    try:
-        async with aiofiles.open(filepath, "w", encoding="utf-8") as f:
-            await f.write(content)
-        logger.debug(f"Successfully wrote file: {filepath}")
-    except Exception as e:
-        error = traceback.format_exc()
-        logger.error(f"Failed to write file {filepath}: {error}")
-        raise
-
-
 async def main_async():
     parser = argparse.ArgumentParser(description="AI Daily Digest (async)")
     parser.add_argument("--feeds", default="labnotes/data/feeds.yaml", help="YAML file with feed groups")
@@ -522,32 +446,7 @@ async def main_async():
     scraping_method = ScrapingMethod(args.scraper)
     items = await fetch_all(feeds, hours=args.hours, scraping_method=scraping_method, section=args.section)
 
-    logger.info("Starting dual-audience item scoring...")
-    for it in items:
-        scores = score_item_dual(it, kw)
-
-        # Store detailed scores for both audiences
-        # it["_scores"] = scores
-
-        # Store individual scores for easy access
-        it["_score_engineers"] = scores.get("engineers", {}).get("score", 0)
-        it["_score_managers"] = scores.get("managers", {}).get("score", 0)
-        it["_score"] = it["_score_engineers"] + it["_score_managers"]  # Combined score for sorting
-
-        # Keep legacy _score field as engineers score for backward compatibility
-        # it["_score"] = it["_score_engineers"]
-
-    # Sort by combined score (engineers + managers)
-    items.sort(key=lambda x: x["_score_engineers"] + x["_score_managers"], reverse=True)
-    top = items[: args.top]
-
-    # Log scores for both audiences
-    eng_scores = [item["_score_engineers"] for item in top]
-    mgr_scores = [item["_score_managers"] for item in top]
-    logger.info(f"Selected top {len(top)} items (sorted by combined score):")
-    logger.info(f"  Engineers scores: {eng_scores}")
-    logger.info(f"  Managers scores: {mgr_scores}")
-    logger.info(f"  Combined scores: {[e + m for e, m in zip(eng_scores, mgr_scores)]})")
+    top = scoring(items, kw["audiences"], args.top)
 
     out_dir = Path(args.out) / args.section if getattr(args, "section") else Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)

@@ -267,8 +267,8 @@ async def main_async():
         save_output(summarised, output_file)
 
         # Save results
-        if len(summarised) > 0:
-            save_to_supabase(summarised, "raw_articles")
+        # if len(summarised) > 0:
+        #     save_to_supabase(summarised, "raw_articles")
 
         # Report statistics
         summary_count = sum(1 for item in summarised if item.get("summary"))

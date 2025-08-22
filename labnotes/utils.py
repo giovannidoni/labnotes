@@ -5,6 +5,7 @@ import json
 import yaml
 import os
 import traceback
+import aiofiles
 
 from supabase import create_client
 
@@ -50,6 +51,18 @@ def save_to_supabase(items: Dict, table_name: str) -> None:
     except Exception as _:
         error = traceback.format_exc()
         logger.info(f"Failed to insert items into Supabase: {error}")
+
+
+async def write_file(filepath: str, content: str) -> None:
+    """Write content to file asynchronously."""
+    try:
+        async with aiofiles.open(filepath, "w", encoding="utf-8") as f:
+            await f.write(content)
+        logger.debug(f"Successfully wrote file: {filepath}")
+    except Exception as e:
+        error = traceback.format_exc()
+        logger.error(f"Failed to write file {filepath}: {error}")
+        raise
 
 
 def find_most_recent_file(directory: Path, pattern: str = "*.json") -> Path:
