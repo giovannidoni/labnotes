@@ -42,49 +42,30 @@ jobs:
           WEBHOOK_TOKEN: ${{ secrets.WEBHOOK_TOKEN }}
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           LINKEDIN_API_TOKEN: ${{ secrets.LINKEDIN_API_TOKEN }}
+          SUPABASE_TOKEN: ${{ secrets.SUPABASE_TOKEN }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
         run: |
           echo "Checking secrets availability..."
           
-          # Check if OPENAI_API_KEY is available as environment variable
-          if [ -z "$OPENAI_API_KEY" ]; then
-            echo "❌ OPENAI_API_KEY is NOT available as environment variable"
-            exit 1
-          else
-            echo "✅ OPENAI_API_KEY is available (length: ${#OPENAI_API_KEY})"
-          fi
-          
-          # Check FIRECRAWL_API_KEY (optional)
-          if [ -z "$FIRECRAWL_API_KEY" ]; then
-            echo "⚠️ FIRECRAWL_API_KEY is NOT configured"
-            exit 1
-          else
-            echo "✅ FIRECRAWL_API_KEY is available (length: ${#FIRECRAWL_API_KEY})"
-          fi
+          required_secrets=(
+            OPENAI_API_KEY
+            FIRECRAWL_API_KEY
+            WEBHOOK_TOKEN
+            SLACK_BOT_TOKEN
+            LINKEDIN_API_TOKEN
+            SUPABASE_TOKEN
+            SUPABASE_URL
+          )
 
-          # Check WEBHOOK_TOKEN (optional)
-          if [ -z "$WEBHOOK_TOKEN" ]; then
-            echo "⚠️ WEBHOOK_TOKEN is NOT configured"
-            exit 1
-          else
-            echo "✅ WEBHOOK_TOKEN is available (length: ${#WEBHOOK_TOKEN})"
-          fi
-
-
-          # Check SLACK_BOT_TOKEN (optional)
-          if [ -z "$SLACK_BOT_TOKEN" ]; then
-            echo "⚠️ SLACK_BOT_TOKEN is NOT configured"
-            exit 1
-          else
-            echo "✅ SLACK_BOT_TOKEN is available (length: ${#SLACK_BOT_TOKEN})"
-          fi
-
-          # Check LINKEDIN_API_TOKEN (optional)
-          if [ -z "$LINKEDIN_API_TOKEN" ]; then
-            echo "⚠️ LINKEDIN_API_TOKEN is NOT configured"
-            exit 1
-          else
-            echo "✅ LINKEDIN_API_TOKEN is available (length: ${#LINKEDIN_API_TOKEN})"
-          fi
+          for secret in "${required_secrets[@]}"; do
+            value="${!secret}"
+            if [ -z "$value" ]; then
+              echo "❌ $secret is NOT available as environment variable"
+              exit 1
+            else
+              echo "✅ $secret is available (length: ${#value})"
+            fi
+          done
 
       - name: Run workflow
         env:
@@ -93,6 +74,8 @@ jobs:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           LINKEDIN_API_TOKEN: ${{ secrets.LINKEDIN_API_TOKEN }}
           PERSON_URN: ${{ secrets.PERSON_URN }}
+          SUPABASE_TOKEN: ${{ secrets.SUPABASE_TOKEN }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
         run: |
           docker run -v $(pwd)/out:/app/out \
           -e OPENAI_API_KEY="$OPENAI_API_KEY" \

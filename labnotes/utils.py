@@ -3,8 +3,10 @@ import logging
 from pathlib import Path
 import json
 import yaml
+import os
 import traceback
 
+from supabase import create_client
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +35,20 @@ def load_input(filepath: str) -> List[Dict[str, Any]]:
         error = traceback.format_exc()
         logger.error(f"Failed to load JSON file {filepath}: {error}")
         raise
+
+def save_to_supabase(items: Dict, table_name: str) -> None:
+    """Save items to Supabase database."""
+    url = os.getenv("SUPABASE_URL")
+    key = os.getenv("SUPABASE_TOKEN")
+    supabase = create_client(url, key)
+    rows = [{"rec": obj} for obj in items]
+
+    # Insert (or upsert if you created unique index on link+group)
+    response = supabase.table(table_name).insert(rows).execute()
+    if response.error:
+        logger.info(f"Failed to insert items into Supabase: {response.error}")
+    else:
+        logger.info(f"Inserted {len(items)} items into Supabase")
 
 
 def find_most_recent_file(directory: Path, pattern: str = "*.json") -> Path:

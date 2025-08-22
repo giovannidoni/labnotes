@@ -15,7 +15,7 @@ from typing import List, Dict, Any, Optional
 import openai
 import traceback
 
-from labnotes.utils import setup_logging
+from labnotes.utils import setup_logging, save_to_supabase
 from labnotes.utils import save_output, load_input, find_most_recent_file
 
 logger = logging.getLogger(__name__)
@@ -265,6 +265,10 @@ async def main_async():
 
         # Save results
         save_output(summarised, output_file)
+
+        # Save results
+        if len(summarised) > 0:
+            save_to_supabase(summarised, "raw_articles")
 
         # Report statistics
         summary_count = sum(1 for item in summarised if item.get("summary"))

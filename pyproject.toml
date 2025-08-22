@@ -17,6 +17,7 @@ dependencies = [
   "lxml-html-clean>=0.1.0",
   "numpy>=2.2.6",
   "openai>=1.99.6",
+  "supabase>=2.18.1",
 ]
 
 [build-system]
