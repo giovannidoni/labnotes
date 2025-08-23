@@ -112,7 +112,7 @@ jobs:
           -e LINKEDIN_API_TOKEN="$LINKEDIN_API_TOKEN" \
           -e SLACK_BOT_TOKEN="$SLACK_BOT_TOKEN" \
           -e PERSON_URN="$PERSON_URN" \
-          -e ENV_FOR_DYNACONF="website"
+          -e ENV_FOR_DYNACONF="website" \
           ${{ env.REPO }} \
           uv run labnotes-post
 
