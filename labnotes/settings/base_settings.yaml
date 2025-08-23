@@ -1,4 +1,5 @@
 default:
   name: "pipeline_name"
-  feed_file: "@format labnotes/settings/{this.name}/feeds.yaml"
-  keywords_file: "@format labnotes/settings/{this.name}/keywords.json"
+  base_path: "/app"
+  feed_file: "@format {base_path}/labnotes/settings/{this.name}/feeds.yaml"
+  keywords_file: "@format {base_path}/labnotes/settings/{this.name}/keywords.json"

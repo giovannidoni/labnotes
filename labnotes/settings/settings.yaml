@@ -13,6 +13,7 @@ website:
 
 website-local:
   dynaconf_merge: true
+  base_path: ""
   publish:
     slack: false
     linkedin: false
