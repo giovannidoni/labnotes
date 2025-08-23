@@ -1,9 +1,6 @@
-default:
-  feed_file: "@format labnotes/settings/{this.current_env}/feeds.yaml"
-  keywords_file: "@format labnotes/settings/{this.current_env}/keywords.json"
-
 website:
   dynaconf_merge: true
+  name: "website"
   digest:
     top: 5
     hours: 24
@@ -14,8 +11,12 @@ website:
     slack: true
     linkedin: true
 
+website-local:
+  dynaconf_merge: true
+  publish:
+    slack: false
+    linkedin: false
+    
 mountainmap:
   dynaconf_merge: true
-  digest:
-    top: 5
-    hours: 24
+  name: "mountainmap"

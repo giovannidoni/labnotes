@@ -1,0 +1,32 @@
+{
+  "audiences": {
+    "all_users": {
+      "description": "Mountain map",
+      "must": [
+      ],
+      "nice": [
+        "sentiero",
+        "trail",
+        "montagna",
+        "mountain",
+        "rifugio",
+        "refuge",
+        "hut",
+        "alta via",
+        "cima",
+        "koomot",
+        "alltrails",
+        "map.xy",
+        "outdoor*active",
+        "wikiloc",
+        "tabacco" 
+      ],
+      "source_weight": {
+        "plus": [
+        ],
+        "minus": [
+        ]
+      }
+    }
+  }
+}

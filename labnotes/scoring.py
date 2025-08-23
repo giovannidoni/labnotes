@@ -45,7 +45,7 @@ def score_item_for_audience(item: Dict[str, Any], audience_kw: Dict[str, Any], a
     }
 
 
-def score_item_dual(item: Dict[str, Any], audience_kw: Dict[str, Any]) -> Dict[str, Any]:
+def score_item_with_keywords(item: Dict[str, Any], audience_kw: Dict[str, Any]) -> Dict[str, Any]:
     """Score an item for both engineers and managers, returning detailed scores."""
     scores = {}
     # New multi-audience format
@@ -59,7 +59,7 @@ def scoring(items: list[Dict[str, Any]], audience_kw: Dict[str, Any], top: int):
     """Score items based on keywords for different audiences."""
     logger.info("Starting dual-audience item scoring...")
     for it in items:
-        scores = score_item_dual(it, audience_kw)
+        scores = score_item_with_keywords(it, audience_kw)
         it["_score"] = 0
         for k in audience_kw:
             it[f"_score_{k}"] = scores.get(k, {}).get("score", 0)
