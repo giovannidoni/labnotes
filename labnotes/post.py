@@ -11,7 +11,7 @@ from labnotes.settings import settings
 logger = logging.getLogger(__name__)
 
 head = """🚨 𝗗𝗮𝗶𝗹𝘆 𝗔𝗜 𝗗𝗶𝗴𝗲𝘀𝘁 🤖
-𝘢𝘷𝘢𝘪𝘭𝘢𝘣𝘭𝘦 𝘢𝘭𝘴𝘰 𝘢𝘵 ➡️ 𝘨𝘪𝘰𝘷𝘢𝘯𝘯𝘪𝘥𝘰𝘯𝘪.𝘨𝘪𝘵𝘩𝘶𝘣.𝘪𝘰 🧑‍💻
+𝘢𝘷𝘢𝘪𝘭𝘢𝘣𝘭𝘦 𝘢𝘭𝘴𝘰 𝘢𝘵 ➡️ https://giovannidoni.github.io 🧑‍💻
 
 👉 Which one do you find most promising?
 
