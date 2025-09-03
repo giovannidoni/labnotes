@@ -241,12 +241,12 @@ async def main_async():
 
     # Find the most recent JSON file in the input path
     try:
-        input_file = find_most_recent_file(input_path, pattern=f"{args.section}*deduped_*.json")
+        input_file = find_most_recent_file(input_path, pattern=f"{args.section}*{settings.summarise.prev_file_prefix}_*.json")
     except FileNotFoundError as e:
         logger.info("No deduped files found, please run the digest and deduped command first.")
         return 0
 
-    output_file = str(input_file).replace("deduped", "summarised")
+    output_file = str(input_file).replace(settings.summarise.prev_file_prefix, "summarised")
 
     logger.info(f"Input: {input_file}, Output: {output_file}")
 

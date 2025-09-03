@@ -3,3 +3,14 @@ default:
   base_path: "/app"
   feed_file: "@format {this.base_path}/labnotes/settings/{this.name}/feeds.yaml"
   keywords_file: "@format {this.base_path}/labnotes/settings/{this.name}/keywords.json"
+  digest:
+    top: 100
+    hours: 24
+
+website-local:
+  dynaconf_merge: true
+  base_path: "."
+
+mountainmap-local:
+  dynaconf_merge: true
+  base_path: "."

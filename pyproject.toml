@@ -19,6 +19,7 @@ dependencies = [
   "openai>=1.99.6",
   "supabase>=2.18.1",
   "dynaconf>=3.2.11",
+  "firecrawl>=4.3.1",
 ]
 
 [build-system]
