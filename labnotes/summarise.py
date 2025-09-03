@@ -49,12 +49,13 @@ def load_prompt_template(prompt_type) -> str:
 class SummarisationService:
     """Service for generating summaries using OpenAI's chat models."""
 
-    def __init__(self, model_name: str = "gpt-4o-mini"):
+    def __init__(self, model_name: str = "gpt-4o-mini", max_concurrent: int = 3):
         """Initialize the summarisation service."""
         self.model_name = model_name
         self.client = None
         self.initialized = False
         self.prompt_template = None
+        self.semaphore = asyncio.Semaphore(max_concurrent)
 
     def _ensure_initialized(self) -> bool:
         """Lazy initialize the OpenAI client."""
@@ -101,55 +102,56 @@ class SummarisationService:
 
     async def summarise_item(self, item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Generate summary and novelty score for a single item."""
-        if not self._ensure_initialized():
-            return None
-
-        try:
-            content = self._extract_content_for_summary(item)
-            if not content:
-                logger.debug(f"No content found for summarisation: {item.get('title', 'Unknown')}")
+        async with self.semaphore:  # Limit concurrent API calls
+            if not self._ensure_initialized():
                 return None
 
-            # Create the prompt
-            full_prompt = f"{self.prompt_template}\n\n{content}"
-
-            # Define the JSON schema for structured output
-            response_schema = schemas[settings.summarise.prompt]
-
-            # Run OpenAI API call in thread pool to avoid blocking
-            loop = asyncio.get_event_loop()
-            response = await loop.run_in_executor(
-                None,
-                lambda: self.client.chat.completions.create(
-                    model=self.model_name,
-                    messages=[{"role": "user", "content": full_prompt}],
-                    temperature=0.3,
-                    max_tokens=200,
-                    response_format={
-                        "type": "json_schema",
-                        "json_schema": {"name": "article_summary", "schema": response_schema, "strict": True},
-                    },
-                ),
-            )
-
-            summary_response = response.choices[0].message.content.strip()
-
-            # Parse JSON response
             try:
-                summary_data = json.loads(summary_response)
-                logger.debug(
-                    f"Generated summary for '{item.get('title', 'Unknown')[:50]}...': {summary_data.get('summary', '')[:50]}..."
-                )
-                return summary_data
-            except json.JSONDecodeError as e:
-                error = traceback.format_exc()
-                logger.error(f"Failed to parse summary JSON for '{item.get('title', 'Unknown')[:50]}...': {error}")
-                return None
+                content = self._extract_content_for_summary(item)
+                if not content:
+                    logger.debug(f"No content found for summarisation: {item.get('title', 'Unknown')}")
+                    return None
 
-        except Exception as e:
-            error = traceback.format_exc()
-            logger.error(f"Failed to generate summary for '{item.get('title', 'Unknown')[:50]}...': {error}")
-            return None
+                # Create the prompt
+                full_prompt = f"{self.prompt_template}\n\n{content}"
+
+                # Define the JSON schema for structured output
+                response_schema = schemas[settings.summarise.prompt]
+
+                # Run OpenAI API call in thread pool to avoid blocking
+                loop = asyncio.get_event_loop()
+                response = await loop.run_in_executor(
+                    None,
+                    lambda: self.client.chat.completions.create(
+                        model=self.model_name,
+                        messages=[{"role": "user", "content": full_prompt}],
+                        temperature=0.3,
+                        max_tokens=200,
+                        response_format={
+                            "type": "json_schema",
+                            "json_schema": {"name": "article_summary", "schema": response_schema, "strict": True},
+                        },
+                    ),
+                )
+
+                summary_response = response.choices[0].message.content.strip()
+
+                # Parse JSON response
+                try:
+                    summary_data = json.loads(summary_response)
+                    logger.debug(
+                        f"Generated summary for '{item.get('title', 'Unknown')[:50]}...': {summary_data.get('summary', '')[:50]}..."
+                    )
+                    return summary_data
+                except json.JSONDecodeError as e:
+                    error = traceback.format_exc()
+                    logger.error(f"Failed to parse summary JSON for '{item.get('title', 'Unknown')[:50]}...': {error}")
+                    return None
+
+            except Exception as e:
+                error = traceback.format_exc()
+                logger.error(f"Failed to generate summary for '{item.get('title', 'Unknown')[:50]}...': {error}")
+                return None
 
     async def process_items_batch(self, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Generate summaries for multiple items and add fields to JSON."""
@@ -189,14 +191,15 @@ class SummarisationService:
 async def summarise_digest(
     items: List[Dict[str, Any]],
     model_name: str = "gpt-4o-mini",
+    max_concurrent: int = 3,
 ) -> List[Dict[str, Any]]:
     """
     Summarise digest items and add summary fields.
     """
-    logger.info(f"Starting summarisation with model={model_name}")
+    logger.info(f"Starting summarisation with model={model_name}, max_concurrent={max_concurrent}")
 
     # Create summarisation service
-    summarisation_service = SummarisationService(model_name)
+    summarisation_service = SummarisationService(model_name, max_concurrent)
 
     # Generate summaries and add to items
     enhanced_items = await summarisation_service.process_items_batch(items)
@@ -250,6 +253,7 @@ async def main_async():
         summarised = await summarise_digest(
             items,
             model_name=args.model,
+            max_concurrent=settings.summarise.max_concurrent,
         )
 
         # Save results

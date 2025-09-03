@@ -37,9 +37,10 @@ mountainmap:
 mountainmap-local:
   name: "mountainmap"
   digest:
-    top: 200
-    hours: 480
+    top: 5
+    hours: 24
   summarise:
     prev_file_prefix: "digest"
     prompt: "summarise_enrich"
     save_to_supabase: false
+    # table_name: "raw_post_mountainmap"

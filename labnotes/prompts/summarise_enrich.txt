@@ -11,7 +11,7 @@ Based on the article content extract the following:
 - relevance_score: [low, medium, high] how relevant is the article for a startup for maps for excursions, consider things like topics and other apps
 - relevance_reasoning: report the reasoning for the relevance score
 - sport type: if mentioned, infer the sport type (alpinism, climbing, hiking, train running, skying etc.)
-- topics: select a few tags for this article (array of strings) itinerary review, gear recommendation, alta via
+- topics: select a few tags for this article (array of strings) itinerary review, refuge info, gear recommendation, alta via, app recommendations etc
 
 Return a json with this schema:
 ```json
