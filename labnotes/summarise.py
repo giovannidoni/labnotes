@@ -17,6 +17,7 @@ import traceback
 
 from labnotes.utils import setup_logging, save_to_supabase
 from labnotes.utils import save_output, load_input, find_most_recent_file
+from labnotes.schemas import schemas
 from labnotes.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -30,7 +31,7 @@ def map_novelty_score_to_int(score_text: str) -> int:
     normalized_score = score_text.lower().strip()
 
     # Return mapped value or default to 3 (average)
-    return score_mapping.get(normalized_score, 3)
+    return score_mapping.get(normalized_score, 1)
 
 
 def load_prompt_template(prompt_type) -> str:
@@ -67,7 +68,7 @@ class SummarisationService:
                 return False
 
             self.client = openai.OpenAI(api_key=api_key)
-            self.prompt_template = load_prompt_template("summarisation")
+            self.prompt_template = load_prompt_template(settings.summarise.prompt)
 
             if not self.prompt_template:
                 logger.error("Failed to load prompt template")
@@ -113,22 +114,7 @@ class SummarisationService:
             full_prompt = f"{self.prompt_template}\n\n{content}"
 
             # Define the JSON schema for structured output
-            response_schema = {
-                "type": "object",
-                "properties": {
-                    "summary": {
-                        "type": "string",
-                        "description": "Summary of the article in no more than 160 characters",
-                    },
-                    "_novelty_score": {
-                        "type": "string",
-                        "enum": ["questionable", "high", "very high"],
-                        "description": "Novelty/originality score of the article",
-                    },
-                },
-                "required": ["summary", "_novelty_score"],
-                "additionalProperties": False,
-            }
+            response_schema = schemas[settings.summarise.prompt]
 
             # Run OpenAI API call in thread pool to avoid blocking
             loop = asyncio.get_event_loop()
@@ -186,10 +172,12 @@ class SummarisationService:
             if isinstance(summary, Exception):
                 logger.warning(f"Summarisation failed for item: {summary}")
             elif summary is not None:
-                enhanced_item["summary"] = summary.get("summary", "")
-                # Map novelty score to integer
-                novelty_text = summary.get("_novelty_score", "")
-                enhanced_item["_novelty_score"] = map_novelty_score_to_int(novelty_text)
+                for field in schemas[settings.summarise.prompt].get("properties", {}).keys():
+                    if field == "_novelty_score":
+                        enhanced_item[field] = map_novelty_score_to_int(summary.get(field, ""))
+                    else:
+                        enhanced_item[field] = summary.get(field, "")
+
                 successful += 1
 
             enhanced_items.append(enhanced_item)

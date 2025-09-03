@@ -4,7 +4,7 @@ website:
   summarise:
     prev_file_prefix: "deduped_"
     save_to_supabase: true
-    summarisation: "summarisation"
+    prompt: "summarisation"
     table_name: "raw_articles"
   publish:
     slack: true
@@ -15,7 +15,7 @@ website-local:
   base_path: ""
   summarise:
     prev_file_prefix: "deduped"
-    summarisation: "summarisation"
+    prompt: "summarisation"
   digest:
     top: 5
     hours: 24
@@ -25,10 +25,14 @@ website-local:
     
 mountainmap:
   name: "mountainmap"
+  digest:
+    top: 100
+    hours: 24
   summarise:
     prev_file_prefix: "digest"
-    summarisation: "summarisation"
+    prompt: "summarise_enrich"
     save_to_supabase: true
+    table_name: "raw_post_mountainmap"
 
 mountainmap-local:
   name: "mountainmap"
@@ -37,5 +41,6 @@ mountainmap-local:
     hours: 24
   summarise:
     prev_file_prefix: "digest"
-    summarisation: "summarisation"
-    save_to_supabase: false
+    prompt: "summarise_enrich"
+    save_to_supabase: true
+    table_name: "raw_post_mountainmap"
