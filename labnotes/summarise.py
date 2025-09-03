@@ -17,6 +17,7 @@ import traceback
 
 from labnotes.utils import setup_logging, save_to_supabase
 from labnotes.utils import save_output, load_input, find_most_recent_file
+from labnotes.schemas import schemas
 from labnotes.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -30,7 +31,7 @@ def map_novelty_score_to_int(score_text: str) -> int:
     normalized_score = score_text.lower().strip()
 
     # Return mapped value or default to 3 (average)
-    return score_mapping.get(normalized_score, 3)
+    return score_mapping.get(normalized_score, 1)
 
 
 def load_prompt_template(prompt_type) -> str:
@@ -48,12 +49,13 @@ def load_prompt_template(prompt_type) -> str:
 class SummarisationService:
     """Service for generating summaries using OpenAI's chat models."""
 
-    def __init__(self, model_name: str = "gpt-4o-mini"):
+    def __init__(self, model_name: str = "gpt-4o-mini", max_concurrent: int = 3):
         """Initialize the summarisation service."""
         self.model_name = model_name
         self.client = None
         self.initialized = False
         self.prompt_template = None
+        self.semaphore = asyncio.Semaphore(max_concurrent)
 
     def _ensure_initialized(self) -> bool:
         """Lazy initialize the OpenAI client."""
@@ -67,7 +69,7 @@ class SummarisationService:
                 return False
 
             self.client = openai.OpenAI(api_key=api_key)
-            self.prompt_template = load_prompt_template("summarisation")
+            self.prompt_template = load_prompt_template(settings.summarise.prompt)
 
             if not self.prompt_template:
                 logger.error("Failed to load prompt template")
@@ -100,70 +102,56 @@ class SummarisationService:
 
     async def summarise_item(self, item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Generate summary and novelty score for a single item."""
-        if not self._ensure_initialized():
-            return None
-
-        try:
-            content = self._extract_content_for_summary(item)
-            if not content:
-                logger.debug(f"No content found for summarisation: {item.get('title', 'Unknown')}")
+        async with self.semaphore:  # Limit concurrent API calls
+            if not self._ensure_initialized():
                 return None
 
-            # Create the prompt
-            full_prompt = f"{self.prompt_template}\n\n{content}"
-
-            # Define the JSON schema for structured output
-            response_schema = {
-                "type": "object",
-                "properties": {
-                    "summary": {
-                        "type": "string",
-                        "description": "Summary of the article in no more than 160 characters",
-                    },
-                    "_novelty_score": {
-                        "type": "string",
-                        "enum": ["questionable", "high", "very high"],
-                        "description": "Novelty/originality score of the article",
-                    },
-                },
-                "required": ["summary", "_novelty_score"],
-                "additionalProperties": False,
-            }
-
-            # Run OpenAI API call in thread pool to avoid blocking
-            loop = asyncio.get_event_loop()
-            response = await loop.run_in_executor(
-                None,
-                lambda: self.client.chat.completions.create(
-                    model=self.model_name,
-                    messages=[{"role": "user", "content": full_prompt}],
-                    temperature=0.3,
-                    max_tokens=200,
-                    response_format={
-                        "type": "json_schema",
-                        "json_schema": {"name": "article_summary", "schema": response_schema, "strict": True},
-                    },
-                ),
-            )
-
-            summary_response = response.choices[0].message.content.strip()
-
-            # Parse JSON response
             try:
-                summary_data = json.loads(summary_response)
-                logger.debug(
-                    f"Generated summary for '{item.get('title', 'Unknown')[:50]}...': {summary_data.get('summary', '')[:50]}..."
-                )
-                return summary_data
-            except json.JSONDecodeError as e:
-                error = traceback.format_exc()
-                logger.error(f"Failed to parse summary JSON for '{item.get('title', 'Unknown')[:50]}...': {error}")
-                return None
+                content = self._extract_content_for_summary(item)
+                if not content:
+                    logger.debug(f"No content found for summarisation: {item.get('title', 'Unknown')}")
+                    return None
 
-        except Exception as e:
-            error = traceback.format_exc()
-            logger.error(f"Failed to generate summary for '{item.get('title', 'Unknown')[:50]}...': {error}")
-            return None
+                # Create the prompt
+                full_prompt = f"{self.prompt_template}\n\n{content}"
+
+                # Define the JSON schema for structured output
+                response_schema = schemas[settings.summarise.prompt]
+
+                # Run OpenAI API call in thread pool to avoid blocking
+                loop = asyncio.get_event_loop()
+                response = await loop.run_in_executor(
+                    None,
+                    lambda: self.client.chat.completions.create(
+                        model=self.model_name,
+                        messages=[{"role": "user", "content": full_prompt}],
+                        temperature=0.3,
+                        max_tokens=200,
+                        response_format={
+                            "type": "json_schema",
+                            "json_schema": {"name": "article_summary", "schema": response_schema, "strict": True},
+                        },
+                    ),
+                )
+
+                summary_response = response.choices[0].message.content.strip()
+
+                # Parse JSON response
+                try:
+                    summary_data = json.loads(summary_response)
+                    logger.debug(
+                        f"Generated summary for '{item.get('title', 'Unknown')[:50]}...': {summary_data.get('summary', '')[:50]}..."
+                    )
+                    return summary_data
+                except json.JSONDecodeError as e:
+                    error = traceback.format_exc()
+                    logger.error(f"Failed to parse summary JSON for '{item.get('title', 'Unknown')[:50]}...': {error}")
+                    return None
+
+            except Exception as e:
+                error = traceback.format_exc()
+                logger.error(f"Failed to generate summary for '{item.get('title', 'Unknown')[:50]}...': {error}")
+                return None
 
     async def process_items_batch(self, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Generate summaries for multiple items and add fields to JSON."""
@@ -186,10 +174,12 @@ class SummarisationService:
             if isinstance(summary, Exception):
                 logger.warning(f"Summarisation failed for item: {summary}")
             elif summary is not None:
-                enhanced_item["summary"] = summary.get("summary", "")
-                # Map novelty score to integer
-                novelty_text = summary.get("_novelty_score", "")
-                enhanced_item["_novelty_score"] = map_novelty_score_to_int(novelty_text)
+                for field in schemas[settings.summarise.prompt].get("properties", {}).keys():
+                    if field == "_novelty_score":
+                        enhanced_item[field] = map_novelty_score_to_int(summary.get(field, ""))
+                    else:
+                        enhanced_item[field] = summary.get(field, "")
+
                 successful += 1
 
             enhanced_items.append(enhanced_item)
@@ -201,14 +191,15 @@ class SummarisationService:
 async def summarise_digest(
     items: List[Dict[str, Any]],
     model_name: str = "gpt-4o-mini",
+    max_concurrent: int = 3,
 ) -> List[Dict[str, Any]]:
     """
     Summarise digest items and add summary fields.
     """
-    logger.info(f"Starting summarisation with model={model_name}")
+    logger.info(f"Starting summarisation with model={model_name}, max_concurrent={max_concurrent}")
 
     # Create summarisation service
-    summarisation_service = SummarisationService(model_name)
+    summarisation_service = SummarisationService(model_name, max_concurrent)
 
     # Generate summaries and add to items
     enhanced_items = await summarisation_service.process_items_batch(items)
@@ -241,12 +232,12 @@ async def main_async():
 
     # Find the most recent JSON file in the input path
     try:
-        input_file = find_most_recent_file(input_path, pattern=f"{args.section}*deduped_*.json")
+        input_file = find_most_recent_file(input_path, pattern=f"{args.section}*{settings.summarise.prev_file_prefix}_*.json")
     except FileNotFoundError as e:
         logger.info("No deduped files found, please run the digest and deduped command first.")
         return 0
 
-    output_file = str(input_file).replace("deduped", "summarised")
+    output_file = str(input_file).replace(settings.summarise.prev_file_prefix, "summarised")
 
     logger.info(f"Input: {input_file}, Output: {output_file}")
 
@@ -262,6 +253,7 @@ async def main_async():
         summarised = await summarise_digest(
             items,
             model_name=args.model,
+            max_concurrent=settings.summarise.max_concurrent,
         )
 
         # Save results

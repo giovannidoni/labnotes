@@ -406,8 +406,8 @@ async def render_outputs(items: List[Dict[str, Any]], section: str, out_dir: str
 
 async def main_async():
     parser = argparse.ArgumentParser(description="AI Daily Digest (async)")
-    parser.add_argument("--hours", type=int, default=24, help="lookback window in hours")
-    parser.add_argument("--top", type=int, default=50, help="top N items to keep")
+    parser.add_argument("--hours", type=int, default=settings.digest.hours, help="lookback window in hours")
+    parser.add_argument("--top", type=int, default=settings.digest.top, help="top N items to keep")
     parser.add_argument("--out", default="./out", help="output directory")
     parser.add_argument("--section", help="process only one section/group from feeds (e.g., 'ai_research_and_models')")
     parser.add_argument(

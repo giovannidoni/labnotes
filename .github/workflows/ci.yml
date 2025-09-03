@@ -67,19 +67,27 @@ jobs:
             fi
           done
 
+  website:
+    runs-on: ubuntu-latest
+    environment: labnotes  # Add this line to use environment secrets
+
+    env:
+      REPO: labnotes
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      SUPABASE_TOKEN: ${{ secrets.SUPABASE_TOKEN }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+
+    steps:
       - name: Run workflow
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          SUPABASE_TOKEN: ${{ secrets.SUPABASE_TOKEN }}
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
         run: |
           docker run -v $(pwd)/out:/app/out \
           -e OPENAI_API_KEY="$OPENAI_API_KEY" \
           -e FIRECRAWL_API_KEY="$FIRECRAWL_API_KEY" \
           -e SUPABASE_TOKEN="$SUPABASE_TOKEN" \
           -e SUPABASE_URL="$SUPABASE_URL" \
+          -e ENV_FOR_DYNACONF="website" \
           ${{ env.REPO }} \
-          /bin/bash  ./exec.sh ${{ inputs.top }}
+          /bin/bash  ./scripts/exec_website.sh ${{ inputs.top }}
 
           ls -la ./out/
 
@@ -116,12 +124,26 @@ jobs:
           ${{ env.REPO }} \
           uv run labnotes-post
 
-      - name: Trigger hook
-        env:
-          WEBHOOK_TOKEN: ${{ secrets.WEBHOOK_TOKEN }}
-        if: steps.publish.outcome == 'success'
+  mountainmap:
+    runs-on: ubuntu-latest
+    environment: labnotes  # Add this line to use environment secrets
+
+    env:
+      REPO: labnotes
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      SUPABASE_TOKEN: ${{ secrets.SUPABASE_TOKEN }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+
+    steps:
+      - name: Run workflow
         run: |
-          curl -X POST "https://backslashn.app.n8n.cloud/webhook-test/6af37fb4-0435-4e58-9f8b-3cd0f06b88d7" \
-            -H "x-api-key: $WEBHOOK_TOKEN" \
-            -H "Content-Type: application/json" \
-            -d '{"bucketName": "labnotes-storage", "fileName": "${{ steps.publish.outputs.s3_file_path }}"}'
+          docker run -v $(pwd)/out:/app/out \
+          -e OPENAI_API_KEY="$OPENAI_API_KEY" \
+          -e FIRECRAWL_API_KEY="$FIRECRAWL_API_KEY" \
+          -e SUPABASE_TOKEN="$SUPABASE_TOKEN" \
+          -e SUPABASE_URL="$SUPABASE_URL" \
+          -e ENV_FOR_DYNACONF="mountainmap" \
+          ${{ env.REPO }} \
+          /bin/bash ./scripts/exec_mountainmap.sh ${{ inputs.top }}
+
+          ls -la ./out/

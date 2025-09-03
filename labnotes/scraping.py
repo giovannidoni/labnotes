@@ -146,7 +146,7 @@ async def scrape_with_beautifulsoup(session: aiohttp.ClientSession, url: str, ti
         return ""
 
 
-async def scrape_with_firecrawl(url: str, firecrawl_app: Optional[FirecrawlApp] = None) -> str:
+def scrape_with_firecrawl(url: str, firecrawl_app: Optional[FirecrawlApp] = None) -> str:
     """Scrape content using Firecrawl API."""
     if not firecrawl_app:
         logger.debug("No Firecrawl app provided, returning empty string")
@@ -155,15 +155,13 @@ async def scrape_with_firecrawl(url: str, firecrawl_app: Optional[FirecrawlApp] 
     logger.debug(f"Starting Firecrawl scraping for: {url}")
     try:
         # Use Firecrawl's scrape endpoint with free tier limits
-        response = firecrawl_app.scrape_url(
+        response = firecrawl_app.scrape(
             url=url,
-            params={
-                "formats": ["markdown", "html"],
-                "includeTags": ["title", "meta", "article", "main", "content"],
-                "excludeTags": ["nav", "footer", "header", "aside", "script", "style"],
-                "timeout": 10000,  # 10 seconds
-                "waitFor": 0,  # Don't wait for JS
-            },
+            formats=["markdown", "html"],
+            include_tags=["title", "meta", "article", "main", "content"],
+            exclude_tags=["nav", "footer", "header", "aside", "script", "style"],
+            timeout=10000,  # 10 seconds
+            wait_for=5,  # Don't wait for JS
         )
 
         # Extract content from response

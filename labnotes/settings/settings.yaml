@@ -1,11 +1,10 @@
 website:
   dynaconf_merge: true
   name: "website"
-  digest:
-    top: 5
-    hours: 24
   summarise:
+    prev_file_prefix: "deduped_"
     save_to_supabase: true
+    prompt: "summarisation"
     table_name: "raw_articles"
   publish:
     slack: true
@@ -14,10 +13,34 @@ website:
 website-local:
   dynaconf_merge: true
   base_path: ""
+  summarise:
+    prev_file_prefix: "deduped"
+    prompt: "summarisation"
+  digest:
+    top: 5
+    hours: 24
   publish:
     slack: false
     linkedin: false
     
 mountainmap:
-  dynaconf_merge: true
   name: "mountainmap"
+  digest:
+    top: 100
+    hours: 24
+  summarise:
+    prev_file_prefix: "digest"
+    prompt: "summarise_enrich"
+    save_to_supabase: true
+    table_name: "raw_post_mountainmap"
+
+mountainmap-local:
+  name: "mountainmap"
+  digest:
+    top: 5
+    hours: 24
+  summarise:
+    prev_file_prefix: "digest"
+    prompt: "summarise_enrich"
+    save_to_supabase: false
+    # table_name: "raw_post_mountainmap"
