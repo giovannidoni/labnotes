@@ -9,10 +9,11 @@ on:
         description: 'Number of sources to process'
         required: false
       only:
-        description: 'Pipeline to run'
+        description: 'Pipeline to run (leave empty to run both)'
         required: false
         type: choice
         options:
+          - ""
           - website
           - mountainmap
 
@@ -78,7 +79,7 @@ jobs:
 
   website:
     needs: build-test
-    if: ${{ !inputs.only || inputs.only == 'website' }}
+    if: ${{ !inputs.only || inputs.only == '' || inputs.only == 'website' }}
     runs-on: ubuntu-latest
     environment: labnotes  # Add this line to use environment secrets
 
@@ -157,7 +158,7 @@ jobs:
 
   mountainmap:
     needs: build-test
-    if: ${{ !inputs.only || inputs.only == 'mountainmap' }}
+    if: ${{ !inputs.only || inputs.only == '' || inputs.only == 'mountainmap' }}
     runs-on: ubuntu-latest
     environment: labnotes  # Add this line to use environment secrets
 
