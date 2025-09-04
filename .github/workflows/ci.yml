@@ -34,6 +34,15 @@ jobs:
       - name: Build Docker image
         run: |
           docker build -t ${{ env.REPO }} .
+          # Save image as tar file
+          docker save ${{ env.REPO }} > /tmp/labnotes-image.tar
+
+      - name: Upload Docker image
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image
+          path: /tmp/labnotes-image.tar
+          retention-days: 1
 
       - name: Verify secrets are configured
         env:
@@ -68,6 +77,7 @@ jobs:
           done
 
   website:
+    needs: build-test
     runs-on: ubuntu-latest
     environment: labnotes  # Add this line to use environment secrets
 
@@ -78,6 +88,19 @@ jobs:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download Docker image
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+          path: /tmp/
+
+      - name: Load Docker image
+        run: |
+          docker load < /tmp/labnotes-image.tar
+
       - name: Run workflow
         run: |
           docker run -v $(pwd)/out:/app/out \
@@ -125,6 +148,7 @@ jobs:
           uv run labnotes-post
 
   mountainmap:
+    needs: build-test
     runs-on: ubuntu-latest
     environment: labnotes  # Add this line to use environment secrets
 
@@ -135,6 +159,19 @@ jobs:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download Docker image
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+          path: /tmp/
+
+      - name: Load Docker image
+        run: |
+          docker load < /tmp/labnotes-image.tar
+
       - name: Run workflow
         run: |
           docker run -v $(pwd)/out:/app/out \
