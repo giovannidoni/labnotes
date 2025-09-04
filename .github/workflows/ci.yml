@@ -8,6 +8,13 @@ on:
       top:
         description: 'Number of sources to process'
         required: false
+      only:
+        description: 'Pipeline to run'
+        required: false
+        type: choice
+        options:
+          - website
+          - mountainmap
 
 jobs:
   build-test:
@@ -71,6 +78,7 @@ jobs:
 
   website:
     needs: build-test
+    if: ${{ !inputs.only || inputs.only == 'website' }}
     runs-on: ubuntu-latest
     environment: labnotes  # Add this line to use environment secrets
 
@@ -149,6 +157,7 @@ jobs:
 
   mountainmap:
     needs: build-test
+    if: ${{ !inputs.only || inputs.only == 'mountainmap' }}
     runs-on: ubuntu-latest
     environment: labnotes  # Add this line to use environment secrets
 
