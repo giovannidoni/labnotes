@@ -110,7 +110,7 @@ jobs:
           -e SUPABASE_URL="$SUPABASE_URL" \
           -e ENV_FOR_DYNACONF="website" \
           ${{ env.REPO }} \
-          /bin/bash  ./scripts/exec_website.sh ${{ inputs.top }}
+          /bin/bash  ./labnotes/scripts/exec_website.sh ${{ inputs.top }}
 
           ls -la ./out/
 
@@ -181,6 +181,6 @@ jobs:
           -e SUPABASE_URL="$SUPABASE_URL" \
           -e ENV_FOR_DYNACONF="mountainmap" \
           ${{ env.REPO }} \
-          /bin/bash ./scripts/exec_mountainmap.sh ${{ inputs.top }}
+          /bin/bash ./labnotes/scripts/exec_mountainmap.sh ${{ inputs.top }}
 
           ls -la ./out/
