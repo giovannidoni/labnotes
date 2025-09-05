@@ -6,6 +6,7 @@ website:
     save_to_supabase: true
     prompt: "summarisation"
     table_name: "raw_articles"
+    max_concurrent: 5
   publish:
     slack: true
     linkedin: true
@@ -16,6 +17,7 @@ website-local:
   summarise:
     prev_file_prefix: "deduped"
     prompt: "summarisation"
+    max_concurrent: 5
   digest:
     top: 5
     hours: 24
@@ -32,6 +34,7 @@ mountainmap:
     prev_file_prefix: "digest"
     prompt: "summarise_enrich"
     save_to_supabase: true
+    max_concurrent: 3
     table_name: "raw_post_mountainmap"
 
 mountainmap-local:
@@ -43,4 +46,5 @@ mountainmap-local:
     prev_file_prefix: "digest"
     prompt: "summarise_enrich"
     save_to_supabase: false
+    max_concurrent: 3
     # table_name: "raw_post_mountainmap"
