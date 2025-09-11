@@ -2,7 +2,7 @@ website:
   dynaconf_merge: true
   name: "website"
   summarise:
-    prev_file_prefix: "deduped_"
+    prev_file_prefix: "deduped"
     save_to_supabase: true
     prompt: "summarisation"
     table_name: "raw_articles"
