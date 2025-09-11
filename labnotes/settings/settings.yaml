@@ -13,10 +13,11 @@ website:
 
 website-local:
   dynaconf_merge: true
-  base_path: ""
+  name: "website"
   summarise:
     prev_file_prefix: "deduped"
     prompt: "summarisation"
+    save_to_supabase: false
     max_concurrent: 5
   digest:
     top: 5

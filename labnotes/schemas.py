@@ -1,5 +1,5 @@
 schemas = {
-    "summarise": {
+    "summarisation": {
         "type": "object",
         "properties": {
             "summary": {
@@ -8,7 +8,7 @@ schemas = {
             },
             "_novelty_score": {
                 "type": "string",
-                "enum": ["questionable", "high", "very high"],
+                "enum": ["average", "high", "very high"],
                 "description": "Novelty/originality score of the article",
             },
         },

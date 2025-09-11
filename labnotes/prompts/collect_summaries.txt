@@ -14,7 +14,7 @@ Subsenquently, it the selection process:
 
 The digest section is in markdowns:
 - bold is with only one * surrounding words
-- links can go as their are without additiona formatting, do not put them between brakets
+- links can go as their are without additional formatting, do not put them between brakets
 
 
 ```json

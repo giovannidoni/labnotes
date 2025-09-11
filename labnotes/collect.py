@@ -95,6 +95,7 @@ class ResultSummarisationService:
 
         try:
             content = self._get_prompt_input(section_items)
+            logger.debug(content)
 
             # Create the prompt
             full_prompt = f"{self.prompt_template}\n\n{content}"
@@ -186,6 +187,7 @@ def filter_items_by_score(items, min_score=0.0, min_novelty_score=0.0, filter_mo
         # Check filter conditions
         score_filter = score >= min_score
         novelty_filter = novelty_score >= min_novelty_score
+        logger.debug(f"Item score: {score}, novelty_score: {novelty_score}")
 
         if filter_mode == "AND":
             # Both conditions must be met
@@ -207,7 +209,7 @@ def filter_items_by_score(items, min_score=0.0, min_novelty_score=0.0, filter_mo
 
 def summarise_results(
     section_items: List[Dict[str, Any]],
-    model_name: str = "gpt-4o-mini",
+    model_name: str = "gpt-4o",
 ) -> List[Dict[str, Any]]:
     """
     Summarise digest items and add summary fields.
