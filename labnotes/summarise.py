@@ -15,8 +15,8 @@ from typing import List, Dict, Any, Optional
 import openai
 import traceback
 
-from labnotes.utils import setup_logging, save_to_supabase
-from labnotes.utils import save_output, load_input, find_most_recent_file
+from labnotes.tools.utils import setup_logging, find_most_recent_file
+from labnotes.tools.io import save_output, load_input, save_to_supabase
 from labnotes.schemas import schemas
 from labnotes.settings import settings
 

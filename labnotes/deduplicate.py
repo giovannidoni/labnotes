@@ -14,9 +14,9 @@ from pathlib import Path
 from typing import List, Dict, Any
 from datetime import datetime
 
-from labnotes.utils import setup_logging
+from labnotes.tools.utils import setup_logging, find_most_recent_file
 from labnotes.similarity import remove_similar_items, parse_date_for_comparison
-from labnotes.utils import save_output, load_input, find_most_recent_file
+from labnotes.tools.io import save_output, load_input
 
 logger = logging.getLogger(__name__)
 

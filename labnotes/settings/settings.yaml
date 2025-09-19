@@ -9,7 +9,7 @@ website:
     max_concurrent: 5
   publish:
     slack: true
-    linkedin: false
+    linkedin: true
 
 website-local:
   dynaconf_merge: true

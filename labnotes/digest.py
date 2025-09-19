@@ -10,7 +10,8 @@ import yaml
 import aiohttp
 from firecrawl import FirecrawlApp
 
-from labnotes.utils import setup_logging, write_file
+from labnotes.tools.utils import setup_logging
+from labnotes.tools.io import write_file
 from labnotes.scoring import scoring
 from labnotes.scraping import ScrapingMethod, domain_of, scrape_article_content
 from labnotes.settings import settings
