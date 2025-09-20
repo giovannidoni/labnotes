@@ -14,7 +14,7 @@ import asyncio
 import traceback
 from pathlib import Path
 from labnotes.summarise import load_prompt_template
-from labnotes.tools.utils import setup_logging, get_feed_sections, find_most_recent_file, load_input, save_output
+from labnotes.tools.utils import setup_logging, get_feed_sections, find_most_recent_file
 from labnotes.tools.io import load_input, save_output
 
 logger = logging.getLogger(__name__)
