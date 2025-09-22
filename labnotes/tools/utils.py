@@ -31,7 +31,7 @@ def setup_logging(level: str = "INFO") -> None:
 
 def get_feed_sections(pipeline: str = "website") -> List[str]:
     """Get the list of feed sections from feeds.yaml."""
-    feeds_file = Path(__file__).parent / "settings" / pipeline / "feeds.yaml"
+    feeds_file = Path(__file__).parent.parent / "settings" / pipeline / "feeds.yaml"
     try:
         with open(feeds_file, "r", encoding="utf-8") as f:
             feeds_data = yaml.safe_load(f)
