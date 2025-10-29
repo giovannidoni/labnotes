@@ -139,6 +139,7 @@ def _main():
 
     # Send to Slack
     if settings.publish.slack:
+        logger.info(f"Publishing on Slack...")
         post_to_slack(blocks)
 
     # Build block for LinkedIn post
@@ -146,6 +147,7 @@ def _main():
 
     # Send to LinkedIn
     if dt.now().day % 3 == 1 and settings.publish.linkedin:
+        logger.info(f"Publishing on LinkedIn...")
         post_to_linkedin(text)
 
     logger.info(f"LinkedIn post content generated: {text}")
