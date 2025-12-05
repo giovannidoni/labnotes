@@ -2,9 +2,8 @@ import logging
 import random
 import time
 import traceback
-from urllib.parse import quote_plus, urlparse
+from urllib.parse import urlparse
 
-from click import prompt
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
@@ -22,12 +21,41 @@ try:
 except ImportError:
     HAS_BS4 = False
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    datefmt="%H:%M:%S",
-)
-log = logging.getLogger(__name__)
+
+logger = logging.getLogger(__name__)
+
+
+
+def get_driver(headless: bool = True):
+    """ Get a Selenium WebDriver instance with stealth settings."""
+    if "driver" in locals():
+        driver.quit()
+    return make_driver(headless=headless)
+
+
+def get_links(url: str, driver=None, apply_filter=None):
+    """ Get all links from a webpage using Selenium."""
+    if driver is None:
+        driver = get_driver(headless=True)
+    driver.get(url)
+    links = driver.find_elements(By.TAG_NAME, "a")
+    return extract_links(links, apply_filter=apply_filter)
+
+
+def extract_links(links: list, apply_filter: str):
+    track_href = set()
+    links_out = set()
+    for link in links:
+        href = link.get_attribute("href")
+        link_text = link.text.strip()
+        if href and href not in track_href:
+            track_href.add(href)
+            if apply_filter:
+                if apply_filter in str(href):
+                    links_out.add((href, link_text))
+            else:
+                links_out.add((href, link_text))
+    return list(links_out)
 
 
 def _domain_only(value: str) -> str:
@@ -47,8 +75,10 @@ def _is_url(text: str) -> bool:
     return False
 
 
-def get_clean_page_text(driver):
+def get_clean_page_text(driver, url: str | None = None) -> str:
     # Wait for main content to load (see previous wait_for_page_content function)
+    if url:
+        driver.get(url)
     wait_for_page_content(driver, timeout=1)
 
     # Get fully rendered HTML
@@ -63,18 +93,6 @@ def get_clean_page_text(driver):
     main = soup.find("main") or soup.find("article") or soup
     clean_text = main.get_text(separator="\n", strip=True)
     return clean_text
-
-
-def extract_links(links):
-    track_href = set()
-    links_out = set()
-    for link in links:
-        href = link.get_attribute("href")
-        link_text = link.text.strip()
-        if href not in track_href:
-            track_href.add(href)
-            links_out.add((href, link_text))
-    return list(links_out)
 
 
 def scrape_website(
@@ -107,22 +125,22 @@ def scrape_website(
     urls_to_visit = [start_url]
     max_pages = max_pages if include_links else 1
 
-    log.info("Starting scrape of %s (max %d pages)", start_url, max_pages)
+    logger.info("Starting scrape of %s (max %d pages)", start_url, max_pages)
 
     while urls_to_visit and len(scraped_data) < max_pages:
         if current_url := urls_to_visit.pop(0):
-            log.info("Queue has %d URLs remaining to visit", len(urls_to_visit))
+            logger.info("Queue has %d URLs remaining to visit", len(urls_to_visit))
 
             if current_url in visited_urls:
                 continue
 
             if not _is_url(current_url):
-                log.warning("Skipping invalid URL: %s", current_url)
+                logger.warning("Skipping invalid URL: %s", current_url)
                 continue
 
             try:
                 # Navigate to the page
-                log.info("Scraping page %d/%d: %s", len(scraped_data) + 1, max_pages, current_url)
+                logger.info("Scraping page %d/%d: %s", len(scraped_data) + 1, max_pages, current_url)
                 driver.get(current_url)
                 kill_cookie_banners(driver, timeout=2)
                 visited_urls.add(current_url)
@@ -174,7 +192,7 @@ def scrape_website(
                             "policy",
                         )
                         if any(keyword in href.lower() for keyword in keywords):
-                            log.info("Skipping link: %s", href)
+                            logger.info("Skipping link: %s", href)
                             continue
                         if href.startswith(("mailto:", "tel:", "javascript:", "ftp:")):
                             continue
@@ -198,16 +216,16 @@ def scrape_website(
                                 if full_url not in urls_to_visit:
                                     urls_to_visit.append(full_url)
                     except Exception as e:
-                        log.debug("Error processing link: %s", e)
+                        logger.debug("Error processing link: %s", e)
                         continue
 
                 scraped_data[current_url] = page_data
                 links_count = len(page_data.get("links_found", {}))
-                log.info(
+                logger.info(
                     "Scraped: %s (%d chars, %d internal links found)", current_url, len(page_data["text"]), links_count
                 )
                 if include_links:
-                    log.info(
+                    logger.info(
                         "Added %d new URLs to queue (total queue size: %d)",
                         len([url for url in links_found if url not in visited_urls]),
                         len(urls_to_visit),
@@ -215,7 +233,7 @@ def scrape_website(
 
             except Exception as e:
                 error = traceback.format_exc()
-                log.error("Error scraping %s: %s", current_url, error)
+                logger.error("Error scraping %s: %s", current_url, error)
                 continue
         else:
             page_data = {
@@ -226,7 +244,7 @@ def scrape_website(
                 "links_found": {},
             }
 
-    log.info("Scraping complete. Scraped %d pages total", len(scraped_data))
+    logger.info("Scraping complete. Scraped %d pages total", len(scraped_data))
     return scraped_data
 
 
@@ -261,3 +279,76 @@ def make_driver(headless: bool = False):  # Changed default to False for better 
     driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
 
     return driver
+
+
+def find_pagination(driver):
+    """Find pagination elements using common selectors."""
+    pagination_selectors = [
+        # Common class names
+        (By.CLASS_NAME, "pagination"),
+        (By.CLASS_NAME, "pager"),
+        (By.CLASS_NAME, "page-numbers"),
+        (By.CLASS_NAME, "wp-pagenavi"),  # WordPress
+        
+        # Common IDs
+        (By.ID, "pagination"),
+        (By.ID, "pager"),
+        
+        # ARIA labels
+        (By.CSS_SELECTOR, "[aria-label*='pagination' i]"),
+        (By.CSS_SELECTOR, "[aria-label*='pager' i]"),
+        
+        # Nav elements with pagination role
+        (By.CSS_SELECTOR, "nav[role='navigation']"),
+    ]
+    
+    for by, selector in pagination_selectors:
+        try:
+            elements = driver.find_elements(by, selector)
+            if elements:
+                return elements
+        except:
+            continue
+    
+    return []
+
+
+def find_page_links(driver):
+    """Find all pagination page number links."""
+    page_links = []
+    
+    # Try to find pagination container first
+    pagination = find_pagination(driver)
+    unique_links = set()
+    
+    if pagination:
+        # Look for links within pagination
+        links = pagination[0].find_elements(By.TAG_NAME, "a")
+        for link in links:
+            href = link.get_attribute("href")
+            text = link.text.strip()
+            
+            # Filter out non-numeric links (Next, Previous, etc.)
+            if (text.isdigit() or href) and href not in unique_links:
+                unique_links.add(href)
+                page_links.append({
+                    'url': href,
+                    'text': text,
+                    'element': link
+                })
+    else:
+        # Fallback: look for links that look like page numbers
+        all_links = driver.find_elements(By.TAG_NAME, "a")
+        for link in all_links:
+            text = link.text.strip()
+            href = link.get_attribute("href")
+            
+            # Check if it looks like a page number
+            if text.isdigit() and 1 <= int(text) <= 1000:
+                page_links.append({
+                    'url': href,
+                    'text': text,
+                    'element': link
+                })
+    
+    return page_links

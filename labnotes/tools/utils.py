@@ -1,3 +1,4 @@
+import sys
 from typing import List, Dict, Any
 import logging
 from pathlib import Path
@@ -17,7 +18,11 @@ def setup_logging(level: str = "INFO") -> None:
         raise ValueError(f"Invalid log level: {level}")
 
     logging.basicConfig(
-        level=numeric_level, format="%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+        level=numeric_level, 
+        format="%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S",
+        handlers=[
+            logging.StreamHandler(sys.stdout)  # Output to notebook
+        ]
     )
 
     # Set third-party loggers to WARNING to reduce noise
