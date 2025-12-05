@@ -20,6 +20,7 @@ dependencies = [
   "supabase>=2.18.1",
   "dynaconf>=3.2.11",
   "firecrawl>=4.3.1",
+  "selenium>=4.38.0",
 ]
 
 [build-system]
@@ -55,6 +56,10 @@ include = ["labnotes*"]
 
 [tool.ruff]
 line-length = 120
-target-version = "py310"
-select = ["E", "F", "W"]
-ignore = ["E501"]
+include = ["*.py"]
+
+[tool.ruff.lint]
+select = ["I"]  # Enable isort rules
+
+[tool.ruff.lint.isort]
+known-first-party = ["zenvi_development"]

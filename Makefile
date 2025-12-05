@@ -17,12 +17,12 @@ install:
 ## lint: run linting checks
 lint:
 	@echo "Running linting checks..."
-	uv run ruff check --fix backend/ tests/
+	uv run ruff check --fix labnotes/
 
 ## format: format code with ruff
 format:
 	@echo "Formatting code..."
-	uv run ruff format backend/ tests/
+	uv run ruff format labnotes/
 
 ## test: run tests
 unit-test: install
