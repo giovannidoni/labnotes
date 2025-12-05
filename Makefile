@@ -12,7 +12,7 @@ clean:
 ## install: install project dependencies
 install:
 	@echo "Installing dependencies with uv..."
-	uv sync
+	uv sync && uv pip install -e .
 
 ## lint: run linting checks
 lint:

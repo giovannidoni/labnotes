@@ -13,7 +13,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 
 # from ladnotes.llm.openai_utils import query_llm_sync
-from ladnotes.scraping_tools.escape_cookie_banner import kill_cookie_banners, wait_for_page_content
+from labnotes.scraping_tools.escape_cookie_banner import kill_cookie_banners, wait_for_page_content
 
 try:
     from bs4 import BeautifulSoup
