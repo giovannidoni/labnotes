@@ -79,7 +79,8 @@ def get_clean_page_text(driver, url: str | None = None) -> str:
     # Wait for main content to load (see previous wait_for_page_content function)
     if url:
         driver.get(url)
-    wait_for_page_content(driver, timeout=1)
+    t = random.uniform(10, 15)
+    wait_for_page_content(driver, timeout=t)
 
     # Get fully rendered HTML
     html = driver.page_source
@@ -279,6 +280,37 @@ def make_driver(headless: bool = False):  # Changed default to False for better 
     driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
 
     return driver
+
+
+def uc_make_driver(headless: bool = False):
+    """Get undetected Chrome driver to bypass Cloudflare."""
+    import undetected_chromedriver as uc
+
+    opts = uc.ChromeOptions()
+
+    # Stealth options to avoid detection
+    opts.add_argument("--disable-blink-features=AutomationControlled")
+    opts.add_argument("--disable-extensions")
+    opts.add_argument("--no-sandbox")
+    opts.add_argument("--disable-infobars")
+    opts.add_argument("--disable-dev-shm-usage")
+    opts.add_argument("--disable-browser-side-navigation")
+    opts.add_argument("--disable-gpu")
+    opts.add_argument("--log-level=3")
+
+    # Add a realistic user agent
+    opts.add_argument(
+        "--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    )
+
+    if headless:
+        opts.add_argument("--headless=new")
+
+    # Use undetected-chromedriver instead of regular Chrome
+    driver = uc.Chrome(options=opts, use_subprocess=True)
+
+    return driver
+
 
 
 def find_pagination(driver):

@@ -609,6 +609,7 @@ dependencies = [
     { name = "requests", marker = "sys_platform == 'darwin' or sys_platform == 'linux'" },
     { name = "selenium", marker = "sys_platform == 'darwin' or sys_platform == 'linux'" },
     { name = "supabase", marker = "sys_platform == 'darwin' or sys_platform == 'linux'" },
+    { name = "undetected-chromedriver", marker = "sys_platform == 'darwin' or sys_platform == 'linux'" },
     { name = "webdriver-manager", marker = "sys_platform == 'darwin' or sys_platform == 'linux'" },
 ]
 
@@ -632,6 +633,7 @@ requires-dist = [
     { name = "requests", specifier = ">=2.31.0" },
     { name = "selenium", specifier = ">=4.38.0" },
     { name = "supabase", specifier = ">=2.18.1" },
+    { name = "undetected-chromedriver", specifier = ">=3.5.5" },
     { name = "webdriver-manager", specifier = ">=4.0.2" },
 ]
 
@@ -1448,6 +1450,17 @@ sdist = { url = "https://files.pythonhosted.org/packages/95/32/1a225d6164441be76
 wheels = [
     { url = "https://files.pythonhosted.org/packages/5c/23/c7abc0ca0a1526a0774eca151daeb8de62ec457e77262b66b359c3c7679e/tzdata-2025.2-py2.py3-none-any.whl", hash = "sha256:1a403fada01ff9221ca8044d701868fa132215d84beb92242d9acd2147f667a8", size = 347839, upload-time = "2025-03-23T13:54:41.845Z" },
 ]
+
+[[package]]
+name = "undetected-chromedriver"
+version = "3.5.5"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "requests", marker = "sys_platform == 'darwin' or sys_platform == 'linux'" },
+    { name = "selenium", marker = "sys_platform == 'darwin' or sys_platform == 'linux'" },
+    { name = "websockets", marker = "sys_platform == 'darwin' or sys_platform == 'linux'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/1f/98/7ab46625ce2317756e4e857fe6ac24b6378c3e8f477da26c95226ed8ccb7/undetected-chromedriver-3.5.5.tar.gz", hash = "sha256:9f945e1435005247abe17de316bcfda85b284a4177fd5f25167c78ced33b65ec", size = 65409, upload-time = "2024-02-17T17:18:36.855Z" }
 
 [[package]]
 name = "urllib3"
