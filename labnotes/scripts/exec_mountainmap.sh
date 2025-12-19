@@ -6,7 +6,7 @@ echo $TOP
 for section in "${sections[@]}"
 do
     echo "Running labnotes for section: $section"
-    uv run labnotes --hours 24 --top $TOP --section $section --scraper beautifulsoup --out ./out --log-level INFO
+    uv run labnotes --hours 168 --top $TOP --section $section --scraper beautifulsoup --out ./out --log-level INFO
 done
 
 for section in "${sections[@]}"

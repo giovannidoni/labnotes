@@ -2,7 +2,7 @@ name: CI - Build and Test Docker Image
 
 on:
   schedule:
-    - cron: '0 12 * * *'  # Every day at 12:00 PM UTC
+    - cron: '0 12 * * 1'  # Every day at 12:00 PM UTC
   workflow_dispatch:
     inputs:
       top:

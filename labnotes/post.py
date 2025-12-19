@@ -146,7 +146,7 @@ def _main():
     text = get_linkedin_block(data)
 
     # Send to LinkedIn
-    if dt.now().day % 3 == 1 and settings.publish.linkedin:
+    if dt.now().weekday() == 0 and settings.publish.linkedin:
         logger.info(f"Publishing on LinkedIn...")
         post_to_linkedin(text)
 
