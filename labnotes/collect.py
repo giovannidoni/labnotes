@@ -4,44 +4,42 @@ Deduplicate digest items based on similarity.
 Reads digest output, filters similar items keeping the most recent or highest scoring ones.
 """
 
-from typing import Dict, List, Any, Optional
-import os, sys
 import argparse
 import json
 import logging
-import openai
-import asyncio
+import os
+import sys
 import traceback
 from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+from litellm import completion
+
+from labnotes.settings import settings
 from labnotes.summarise import load_prompt_template
-from labnotes.tools.utils import setup_logging, get_feed_sections, find_most_recent_file
 from labnotes.tools.io import load_input, save_output
+from labnotes.tools.utils import find_most_recent_file, get_feed_sections, setup_logging
 
 logger = logging.getLogger(__name__)
 
 
 class ResultSummarisationService:
-    """Service for generating result summaries using OpenAI's chat models."""
+    """Service for generating result summaries using LiteLLM (supports multiple providers)."""
 
-    def __init__(self, model_name: str = "gpt-4o-mini"):
+    def __init__(self, model_name: str):
         """Initialize the summarisation service."""
         self.model_name = model_name
-        self.client = None
         self.initialized = False
         self.prompt_template = None
 
     def _ensure_initialized(self) -> bool:
-        """Lazy initialize the OpenAI client."""
+        """Lazy initialize the summarisation service."""
         if self.initialized:
             return True
 
         try:
-            api_key = os.getenv("OPENAI_API_KEY")
-            if not api_key:
-                logger.error("OPENAI_API_KEY environment variable not set")
-                return False
-
-            self.client = openai.OpenAI(api_key=api_key)
+            # LiteLLM auto-detects API keys from environment variables
+            # GEMINI_API_KEY for Gemini, OPENAI_API_KEY for OpenAI, etc.
             self.prompt_template = load_prompt_template("collect_summaries")
 
             if not self.prompt_template:
@@ -140,17 +138,16 @@ class ResultSummarisationService:
                 "additionalProperties": False,
             }
 
-            # Run OpenAI API call in thread pool to avoid blocking
-            loop = asyncio.get_event_loop()
+            # Use LiteLLM for provider-agnostic API call
             logger.debug(full_prompt)
-            response = self.client.chat.completions.create(
+            response = completion(
                 model=self.model_name,
                 messages=[{"role": "user", "content": full_prompt}],
                 temperature=0.3,
                 max_tokens=2500,
                 response_format={
-                    "type": "json_schema",
-                    "json_schema": {"name": "article_summary", "schema": response_schema, "strict": True},
+                    "type": "json_object",
+                    "response_schema": response_schema,
                 },
             )
 
@@ -210,7 +207,7 @@ def filter_items_by_score(items, min_score=0.0, min_novelty_score=0.0, filter_mo
 
 def summarise_results(
     section_items: List[Dict[str, Any]],
-    model_name: str = "gpt-4o",
+    model_name: str,
 ) -> List[Dict[str, Any]]:
     """
     Summarise digest items and add summary fields.
@@ -230,21 +227,6 @@ def _main():
     """Main async function."""
     parser = argparse.ArgumentParser(description="summarise digest items using AI prompts")
     parser.add_argument("--input", required=True, help="Input JSON digest path")
-    parser.add_argument(
-        "--model",
-        default="gpt-4o",
-        help="OpenAI model name for summarisation (e.g., gpt-4o-mini, gpt-4o, gpt-3.5-turbo)",
-    )
-    parser.add_argument("--min-score", type=float, default=8.0, help="Minimum score threshold for filtering posts")
-    parser.add_argument(
-        "--min-novelty-score", type=float, default=2.0, help="Minimum novelty score threshold for filtering posts"
-    )
-    parser.add_argument(
-        "--filter-mode",
-        choices=["AND", "OR"],
-        default="AND",
-        help="How to combine score filters: AND (both conditions must be met) or OR (either condition)",
-    )
     parser.add_argument(
         "--log-level", choices=["DEBUG", "INFO", "WARNING", "ERROR"], default="INFO", help="Set logging level"
     )
@@ -271,7 +253,10 @@ def _main():
             # Load digest
             items = load_input(str(input_file))
             items = filter_items_by_score(
-                items, min_score=args.min_score, min_novelty_score=args.min_novelty_score, filter_mode=args.filter_mode
+                items,
+                min_score=settings.collect.min_score,
+                min_novelty_score=settings.collect.min_novelty_score,
+                filter_mode=settings.collect.filter_mode,
             )
 
             if not items:
@@ -287,7 +272,7 @@ def _main():
 
     results = summarise_results(
         section_items,
-        model_name=args.model,
+        model_name=settings.collect.model,
     )
     save_output_path = Path(args.input) / "summarised_results.json"
     save_output(results, str(save_output_path))

@@ -23,12 +23,12 @@ schemas = {
             "summary": {
                 "type": "string",
                 "description": "Article summary in no more than 500 characters",
-                "maxLength": 500
+                "maxLength": 500,
             },
             "language": {
                 "type": "string",
                 "description": "Primary language of the article",
-                "enum": ["english", "italian", "french", "german", "spanish", "portuguese", "other"]
+                "enum": ["english", "italian", "french", "german", "spanish", "portuguese", "other"],
             },
             "location": {
                 "type": "string",
@@ -61,46 +61,42 @@ schemas = {
                     "Spagna",
                     "Nord America",
                     "other",
-                    "not applicable"
+                    "not applicable",
                 ],
             },
             "relevance_score": {
                 "type": "string",
                 "description": "How relevant the article is for a mountain maps startup",
-                "enum": ["low", "medium", "high"]
+                "enum": ["low", "medium", "high"],
             },
             "relevance_reasoning": {
                 "type": "string",
                 "description": "Detailed reasoning for the relevance score assignment",
                 "minLength": 10,
-                "maxLength": 500
+                "maxLength": 500,
             },
             "sport_type": {
                 "type": "string",
                 "description": "Type of sport relevant to the article",
-                "enum": ["alpinism", "climbing", "hiking", "train running", "alpine skiing", "other", "not applicable"]
+                "enum": ["alpinism", "climbing", "hiking", "train running", "alpine skiing", "other", "not applicable"],
             },
             "topics": {
                 "type": "array",
                 "description": "Relevant topic tags for the article",
-                "items": {
-                    "type": "string",
-                    "minLength": 2,
-                    "maxLength": 50
+                "items": {"type": "string", "minLength": 2, "maxLength": 50},
+                "minItems": 1,
+                "maxItems": 10,
             },
-            "minItems": 1,
-            "maxItems": 10,
-            }
         },
         "required": [
             "summary",
-            "language", 
+            "language",
             "location",
             "relevance_score",
             "relevance_reasoning",
             "sport_type",
-            "topics"
+            "topics",
         ],
-        "additionalProperties": False
-    }
+        "additionalProperties": False,
+    },
 }

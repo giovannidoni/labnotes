@@ -1,32 +1,51 @@
 ai_research_and_models:
-- https://export.arxiv.org/rss/cs.CL
-- https://export.arxiv.org/rss/cs.AI
-- https://paperswithcode.com/rss
-- https://hnrss.org/newest
-- https://papers.takara.ai/api/feed
+  - https://export.arxiv.org/rss/cs.CL
+  - https://export.arxiv.org/rss/cs.AI
+  - https://paperswithcode.com/rss
+  - https://hnrss.org/newest
+  - https://papers.takara.ai/api/feed
+  - https://openai.com/news/rss
+  - https://www.anthropic.com/news/rss
+  - https://mistral.ai/news/index.xml
+  - https://deepmind.google/blog/rss.xml
+  - https://magazine.sebastianraschka.com/feed
+  - https://www.interconnects.ai/feed
+  - https://cameronrwolfe.substack.com/feed
+  - https://bair.berkeley.edu/blog/feed.xml
 community_signals:
-- https://github.com/vllm-project/vllm/commits/main.atom
-- https://github.com/langchain-ai/langchain/commits/master.atom
-- https://github.com/run-llama/llama_index/commits/main.atom
-- https://github.com/kserve/kserve/commits/master.atom
-- https://hnrss.org/newest?q=ai
-- https://www.reddit.com/r/MachineLearning/.rss
-- https://www.reddit.com/r/LocalLLaMA/.rss
-- https://lobste.rs/rss
-- https://www.reddit.com/r/DeepLearningPapers/.rss
-- https://www.reddit.com/r/ArtificialInteligence/.rss
-- https://www.latent.space/feed
-- https://eugeneyan.com/rss/
-- https://huyenchip.com/feed.xml
-- https://mlops.community/feed/
+  - https://github.com/vllm-project/vllm/commits/main.atom
+  - https://github.com/langchain-ai/langchain/commits/master.atom
+  - https://github.com/run-llama/llama_index/commits/main.atom
+  - https://github.com/kserve/kserve/commits/master.atom
+  - https://hnrss.org/newest?q=ai
+  - https://www.reddit.com/r/MachineLearning/.rss
+  - https://www.reddit.com/r/LocalLLaMA/.rss
+  - https://lobste.rs/rss
+  - https://www.reddit.com/r/DeepLearningPapers/.rss
+  - https://www.reddit.com/r/ArtificialInteligence/.rss
+  - https://www.latent.space/feed
+  - https://eugeneyan.com/rss/
+  - https://huyenchip.com/feed.xml
+  - https://mlops.community/feed/
+  - https://huggingface.co/blog/feed.xml
+  - https://blog.langchain.dev/rss/
+  - https://www.anyscale.com/blog/rss.xml
+  - https://wandb.ai/fully-connected/feed.xml
+  - https://jack-clark.net/feed/
+  - https://www.kaitchup.com/feed
 engineering_leadership_and_management:
-- https://newsletter.pragmaticengineer.com/feed
-- https://blog.pragmaticengineer.com/rss
-- https://jellyfish.co/blog/feed
-- https://newsletter.getdx.com/feed
-- https://feed.infoq.com/ai-ml
-- https://queue.acm.org/rss/feeds/queuecontent.xml
-- http://feeds.feedburner.com/HighScalability
-- https://martinfowler.com/feed.atom
-- https://www.oreilly.com/radar/topics/ai-ml/feed/
-- https://www.notboring.co/feed
+  - https://newsletter.pragmaticengineer.com/feed
+  - https://blog.pragmaticengineer.com/rss
+  - https://jellyfish.co/blog/feed
+  - https://newsletter.getdx.com/feed
+  - https://feed.infoq.com/ai-ml
+  - https://queue.acm.org/rss/feeds/queuecontent.xml
+  - http://feeds.feedburner.com/HighScalability
+  - https://martinfowler.com/feed.atom
+  - https://www.oreilly.com/radar/topics/ai-ml/feed/
+  - https://www.notboring.co/feed
+  - https://blog.staysaasy.com/feed
+  - https://www.oneusefulthing.org/feed
+  - https://www.theengineeringmanager.com/feed/
+  - https://www.lennysnewsletter.com/feed
+  - https://github.blog/category/engineering/feed/
