@@ -122,7 +122,10 @@ Scoring keywords in `labnotes/settings/website/keywords.json`:
 ## Web Scraping Options
 
 ```bash
-# Newspaper3k (default) - best for news articles
+# Trafilatura (default) - modern, well-maintained, best extraction quality
+labnotes --section ai_research_and_models --scraper trafilatura
+
+# Newspaper3k - good for news articles
 labnotes --section ai_research_and_models --scraper newspaper
 
 # BeautifulSoup - lightweight HTML parsing
@@ -130,6 +133,9 @@ labnotes --section ai_research_and_models --scraper beautifulsoup
 
 # Firecrawl - JavaScript-heavy sites (requires FIRECRAWL_API_KEY)
 labnotes --section ai_research_and_models --scraper firecrawl
+
+# Auto - tries trafilatura → newspaper → beautifulsoup
+labnotes --section ai_research_and_models --scraper auto
 ```
 
 ## Environment Variables

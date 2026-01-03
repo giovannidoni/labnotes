@@ -417,9 +417,9 @@ async def main_async():
     parser.add_argument("--section", help="process only one section/group from feeds (e.g., 'ai_research_and_models')")
     parser.add_argument(
         "--scraper",
-        choices=["newspaper", "beautifulsoup", "firecrawl", "auto"],
-        default="newspaper",
-        help="Web scraping method (default: newspaper)",
+        choices=["trafilatura", "newspaper", "beautifulsoup", "firecrawl", "auto"],
+        default="trafilatura",
+        help="Web scraping method (default: trafilatura)",
     )
     parser.add_argument(
         "--log-level",

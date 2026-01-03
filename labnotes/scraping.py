@@ -12,6 +12,7 @@ from typing import Optional, Tuple
 from urllib.parse import urlparse
 
 import aiohttp
+import trafilatura
 from bs4 import BeautifulSoup
 from firecrawl import FirecrawlApp
 from newspaper import Article
@@ -23,6 +24,7 @@ class ScrapingMethod(Enum):
     NEWSPAPER = "newspaper"
     BEAUTIFULSOUP = "beautifulsoup"
     FIRECRAWL = "firecrawl"
+    TRAFILATURA = "trafilatura"
     AUTO = "auto"
 
 
@@ -56,7 +58,7 @@ def is_pdf_url(url: str) -> bool:
         return False
 
 
-async def scrape_with_newspaper(session: aiohttp.ClientSession, url: str, timeout: int = 10) -> str:
+async def scrape_with_newspaper(session: aiohttp.ClientSession, url: str, timeout: int = 30) -> str:
     """Scrape content using newspaper3k library."""
     logger.debug(f"Starting newspaper scraping for: {url}")
     try:
@@ -82,7 +84,7 @@ async def scrape_with_newspaper(session: aiohttp.ClientSession, url: str, timeou
         if article.title and article.title not in text[:200]:
             text = f"{article.title}\n\n{text}"
 
-        result = text[:5000]  # Limit content size
+        result = text[:10000]  # Limit content size
         logger.info(f"Newspaper3k successfully scraped {url}: {len(result)} chars extracted")
         return result
 
@@ -92,7 +94,7 @@ async def scrape_with_newspaper(session: aiohttp.ClientSession, url: str, timeou
         return ""
 
 
-async def scrape_with_beautifulsoup(session: aiohttp.ClientSession, url: str, timeout: int = 10) -> str:
+async def scrape_with_beautifulsoup(session: aiohttp.ClientSession, url: str, timeout: int = 30) -> str:
     """Scrape content using BeautifulSoup (fallback method)."""
     logger.debug(f"Starting BeautifulSoup scraping for: {url}")
     try:
@@ -136,13 +138,50 @@ async def scrape_with_beautifulsoup(session: aiohttp.ClientSession, url: str, ti
 
         # Clean up whitespace and limit size
         content_text = re.sub(r"\s+", " ", content_text).strip()
-        result = content_text[:3000]
+        result = content_text[:10000]
         logger.info(f"BeautifulSoup successfully scraped {url}: {len(result)} chars extracted")
         return result
 
     except Exception as e:
         error = traceback.format_exc()
         logger.warning(f"BeautifulSoup failed for {url}: {error}")
+        return ""
+
+
+async def scrape_with_trafilatura(session: aiohttp.ClientSession, url: str, timeout: int = 30) -> str:
+    """Scrape content using trafilatura library (modern, well-maintained)."""
+    logger.debug(f"Starting trafilatura scraping for: {url}")
+    try:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        }
+
+        async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=timeout)) as response:
+            response.raise_for_status()
+            html_content = await response.text()
+
+        logger.debug(f"Downloaded HTML content: {len(html_content)} chars")
+
+        # Use trafilatura to extract content
+        text = trafilatura.extract(
+            html_content,
+            include_comments=False,
+            include_tables=True,
+            no_fallback=False,
+            favor_precision=True,
+        )
+
+        if not text:
+            logger.warning(f"Trafilatura extracted no content from {url}")
+            return ""
+
+        result = text[:10000]
+        logger.info(f"Trafilatura successfully scraped {url}: {len(result)} chars extracted")
+        return result
+
+    except Exception as e:
+        error = traceback.format_exc()
+        logger.warning(f"Trafilatura failed for {url}: {error}")
         return ""
 
 
@@ -171,15 +210,15 @@ def scrape_with_firecrawl(url: str, firecrawl_app: Optional[FirecrawlApp] = None
 
             # Prefer markdown content, fallback to cleaned text
             if "markdown" in data and data["markdown"]:
-                result = data["markdown"][:3000]
+                result = data["markdown"][:10000]
                 logger.debug("Used Firecrawl markdown content")
             elif "content" in data and data["content"]:
-                result = data["content"][:3000]
+                result = data["content"][:10000]
                 logger.debug("Used Firecrawl text content")
             elif "html" in data and data["html"]:
                 # Clean HTML as fallback
                 soup = BeautifulSoup(data["html"], "html.parser")
-                result = soup.get_text(separator=" ", strip=True)[:3000]
+                result = soup.get_text(separator=" ", strip=True)[:10000]
                 logger.debug("Used Firecrawl HTML content (cleaned)")
 
         if result:
@@ -297,7 +336,7 @@ async def scrape_article_content(
     url: str,
     method: ScrapingMethod,
     firecrawl_app: Optional[FirecrawlApp] = None,
-    timeout: int = 10,
+    timeout: int = 30,
 ) -> Tuple[str, str, str]:
     """Scrape article content and return (content, final_url, final_source)."""
     logger.debug(f"Scraping content from {url} using method {method.value}")
@@ -318,11 +357,22 @@ async def scrape_article_content(
         method = ScrapingMethod.NEWSPAPER
 
     if method == ScrapingMethod.AUTO:
-        # Try newspaper first, then beautifulsoup
+        # Try trafilatura first (modern, well-maintained), then newspaper, then beautifulsoup
+        content = await scrape_with_trafilatura(session, scraping_url, timeout)
+        if content:
+            return content, original_url, original_source
         content = await scrape_with_newspaper(session, scraping_url, timeout)
         if content:
             return content, original_url, original_source
         content = await scrape_with_beautifulsoup(session, scraping_url, timeout)
+        return content, original_url, original_source
+
+    elif method == ScrapingMethod.TRAFILATURA:
+        content = await scrape_with_trafilatura(session, scraping_url, timeout)
+        if content:
+            return content, original_url, original_source
+        # Fallback to newspaper if trafilatura fails
+        content = await scrape_with_newspaper(session, scraping_url, timeout)
         return content, original_url, original_source
 
     elif method == ScrapingMethod.NEWSPAPER:
