@@ -5,26 +5,22 @@ Reads digest output, filters similar items keeping the most recent or highest sc
 """
 
 import argparse
-import json
 import asyncio
+import json
 import logging
 import sys
 import traceback
-from pathlib import Path
-from typing import List, Dict, Any
 from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List
 
-from labnotes.tools.utils import setup_logging, find_most_recent_file
-from labnotes.similarity import remove_similar_items, parse_date_for_comparison
-from labnotes.tools.io import save_output, load_input
+from labnotes.embeddings import is_gemini_model, is_openai_model
+from labnotes.settings import settings
+from labnotes.similarity import parse_date_for_comparison, remove_similar_items
+from labnotes.tools.io import load_input, save_output
+from labnotes.tools.utils import find_most_recent_file, setup_logging
 
 logger = logging.getLogger(__name__)
-
-
-def is_openai_model(model_name: str) -> bool:
-    """Determine if model is an OpenAI model based on name."""
-    openai_models = {"text-embedding-3-small", "text-embedding-3-large", "text-embedding-ada-002"}
-    return model_name in openai_models
 
 
 def filter_by_score_and_date(
@@ -96,10 +92,10 @@ def filter_by_score_and_date(
 
 async def deduplicate_digest(
     items: List[Dict[str, Any]],
+    model_name: str,
     similarity_threshold: float = 0.85,
     prefer_recent: bool = True,
     score_weight: float = 0.3,
-    model_name: str = "all-MiniLM-L6-v2",
 ) -> List[Dict[str, Any]]:
     """
     Deduplicate digest items based on similarity.
@@ -115,8 +111,12 @@ async def deduplicate_digest(
         Deduplicated list of items
     """
     # Determine provider based on model name
-    use_openai = is_openai_model(model_name)
-    provider = "OpenAI" if use_openai else "sentence-transformers"
+    if is_gemini_model(model_name):
+        provider = "Gemini"
+    elif is_openai_model(model_name):
+        provider = "OpenAI"
+    else:
+        provider = "LiteLLM"
 
     logger.info(
         f"Starting deduplication with threshold={similarity_threshold}, "
@@ -154,11 +154,6 @@ async def main_async():
         help="Weight for score vs recency (0=only date, 1=only score, default: 0.3)",
     )
     parser.add_argument(
-        "--model",
-        default="text-embedding-3-small",
-        help="Embedding model name (OpenAI models: text-embedding-3-small, text-embedding-3-large, text-embedding-ada-002)",
-    )
-    parser.add_argument(
         "--log-level", choices=["DEBUG", "INFO", "WARNING", "ERROR"], default="INFO", help="Set logging level"
     )
     args = parser.parse_args()
@@ -188,13 +183,12 @@ async def main_async():
             logger.warning("No items to process")
             return 0
 
-        # Deduplicate
         deduplicated = await deduplicate_digest(
             items,
+            model_name=settings.dedup.model,
             similarity_threshold=args.threshold,
             prefer_recent=not args.prefer_score,
             score_weight=args.score_weight,
-            model_name=args.model,
         )
 
         # Save results

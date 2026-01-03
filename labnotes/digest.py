@@ -1,21 +1,27 @@
 #!/usr/bin/env python3
-import argparse, datetime, json, re, sys, asyncio, os, logging
-from typing import List, Dict, Any, Optional
-from pathlib import Path
+import argparse
+import asyncio
+import datetime
+import json
+import logging
+import os
+import re
+import sys
 import traceback
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
-import feedparser
-from jinja2 import Environment, FileSystemLoader, select_autoescape
-import yaml
 import aiohttp
+import feedparser
+import yaml
 from firecrawl import FirecrawlApp
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from labnotes.tools.utils import setup_logging
-from labnotes.tools.io import write_file
 from labnotes.scoring import scoring
 from labnotes.scraping import ScrapingMethod, domain_of, scrape_article_content
 from labnotes.settings import settings
-
+from labnotes.tools.io import write_file
+from labnotes.tools.utils import setup_logging
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -407,8 +413,6 @@ async def render_outputs(items: List[Dict[str, Any]], section: str, out_dir: str
 
 async def main_async():
     parser = argparse.ArgumentParser(description="AI Daily Digest (async)")
-    parser.add_argument("--hours", type=int, default=settings.digest.hours, help="lookback window in hours")
-    parser.add_argument("--top", type=int, default=settings.digest.top, help="top N items to keep")
     parser.add_argument("--out", default="./out", help="output directory")
     parser.add_argument("--section", help="process only one section/group from feeds (e.g., 'ai_research_and_models')")
     parser.add_argument(
@@ -445,9 +449,9 @@ async def main_async():
         return 1
 
     scraping_method = ScrapingMethod(args.scraper)
-    items = await fetch_all(feeds, hours=args.hours, scraping_method=scraping_method, section=args.section)
+    items = await fetch_all(feeds, hours=settings.digest.hours, scraping_method=scraping_method, section=args.section)
 
-    top = scoring(items, kw["audiences"], args.top)
+    top = scoring(items, kw["audiences"], settings.digest.top)
 
     out_dir = Path(args.out) / args.section if getattr(args, "section") else Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)

@@ -1,60 +1,60 @@
 """
 Embedding functionality for content similarity detection.
-Uses lightweight sentence-transformers models or OpenAI embeddings for efficient embedding generation.
+Uses LiteLLM for provider-agnostic embedding generation (supports Gemini, OpenAI, and more).
 """
 
 import asyncio
 import logging
-from typing import List, Dict, Any, Optional, Union
-import numpy as np
 import os
 import traceback
+from typing import Any, Dict, List, Optional, Union
+
+import numpy as np
 
 # from sentence_transformers import SentenceTransformer
-import openai
-
+from litellm import aembedding
 
 logger = logging.getLogger(__name__)
 
-# Global embedding service instances
-_embedding_service = None
-_openai_embedding_service = None
+# Global embedding service instance
+_litellm_embedding_service = None
+
+
+def is_gemini_model(model_name: str) -> bool:
+    """Determine if model is a Gemini model based on name prefix."""
+    return model_name.startswith("gemini/")
 
 
 def is_openai_model(model_name: str) -> bool:
     """Determine if model is an OpenAI model based on name."""
+    openai_prefixes = ["openai/", "text-embedding-"]
     openai_models = {"text-embedding-3-small", "text-embedding-3-large", "text-embedding-ada-002"}
-    return model_name in openai_models
+    return model_name in openai_models or any(model_name.startswith(p) for p in openai_prefixes)
 
 
-class OpenAIEmbeddingService:
-    """Service for generating embeddings using OpenAI's text-embedding models."""
+class LiteLLMEmbeddingService:
+    """Service for generating embeddings using LiteLLM (supports multiple providers)."""
 
-    def __init__(self, model_name: str = "text-embedding-3-small"):
-        """Initialize the OpenAI embedding service."""
+    def __init__(self, model_name: str):
+        """Initialize the embedding service."""
         self.model_name = model_name
-        self.client = None
         self.initialized = False
 
     def _ensure_initialized(self) -> bool:
-        """Lazy initialize the OpenAI client."""
+        """Lazy initialize the embedding service."""
         if self.initialized:
             return True
 
         try:
-            api_key = os.getenv("OPENAI_API_KEY")
-            if not api_key:
-                logger.error("OPENAI_API_KEY environment variable not set")
-                return False
-
-            logger.info(f"Initializing OpenAI embedding service with model: {self.model_name}")
-            self.client = openai.OpenAI(api_key=api_key)
+            # LiteLLM auto-detects API keys from environment variables
+            # GEMINI_API_KEY for Gemini, OPENAI_API_KEY for OpenAI, etc.
+            logger.info(f"Initializing embedding service with model: {self.model_name}")
             self.initialized = True
-            logger.info(f"Successfully initialized OpenAI embedding service")
+            logger.info(f"Successfully initialized embedding service")
             return True
         except Exception as e:
             error = traceback.format_exc()
-            logger.error(f"Failed to initialize OpenAI embedding service: {error}")
+            logger.error(f"Failed to initialize embedding service: {error}")
             return False
 
     def _extract_text_for_embedding(self, item: Dict[str, Any]) -> str:
@@ -89,25 +89,23 @@ class OpenAIEmbeddingService:
                 logger.debug(f"No text found for embedding: {item.get('title', 'Unknown')}")
                 return None
 
-            # Run OpenAI API call in thread pool to avoid blocking
-            loop = asyncio.get_event_loop()
-            response = await loop.run_in_executor(
-                None, lambda: self.client.embeddings.create(input=text, model=self.model_name)
+            # Use native async LiteLLM call
+            response = await aembedding(
+                model=self.model_name,
+                input=[text],  # LiteLLM expects a list
             )
 
-            embedding = np.array(response.data[0].embedding, dtype=np.float32)
+            embedding = np.array(response.data[0]["embedding"], dtype=np.float32)
 
             # Normalize the embedding
             embedding = embedding / np.linalg.norm(embedding)
 
-            logger.debug(
-                f"Generated OpenAI embedding for '{item.get('title', 'Unknown')[:50]}...': shape={embedding.shape}"
-            )
+            logger.debug(f"Generated embedding for '{item.get('title', 'Unknown')[:50]}...': shape={embedding.shape}")
             return embedding
 
         except Exception as e:
             error = traceback.format_exc()
-            logger.warning(f"Failed to generate OpenAI embedding for '{item.get('title', 'Unknown')[:50]}...': {error}")
+            logger.warning(f"Failed to generate embedding for '{item.get('title', 'Unknown')[:50]}...': {error}")
             return None
 
     async def generate_embeddings_batch(self, items: List[Dict[str, Any]]) -> List[Optional[np.ndarray]]:
@@ -115,7 +113,7 @@ class OpenAIEmbeddingService:
         if not self._ensure_initialized():
             return [None] * len(items)
 
-        logger.info(f"Generating OpenAI embeddings for {len(items)} items...")
+        logger.info(f"Generating embeddings for {len(items)} items...")
 
         # Generate embeddings concurrently
         tasks = [self.generate_embedding(item) for item in items]
@@ -126,7 +124,7 @@ class OpenAIEmbeddingService:
         successful = 0
         for i, embedding in enumerate(embeddings):
             if isinstance(embedding, Exception):
-                logger.warning(f"OpenAI embedding generation failed for item {i}: {embedding}")
+                logger.warning(f"Embedding generation failed for item {i}: {embedding}")
                 result_embeddings.append(None)
             elif embedding is not None:
                 result_embeddings.append(embedding)
@@ -134,41 +132,21 @@ class OpenAIEmbeddingService:
             else:
                 result_embeddings.append(None)
 
-        logger.info(f"Successfully generated {successful}/{len(items)} OpenAI embeddings")
+        logger.info(f"Successfully generated {successful}/{len(items)} embeddings")
         return result_embeddings
 
 
 def get_embedding_service(
-    model_name: str = "all-MiniLM-L6-v2",
-) -> Union[OpenAIEmbeddingService, None]:
-    """Get or create the appropriate embedding service instance based on model name."""
-    global _embedding_service, _openai_embedding_service
+    model_name: str,
+) -> Union[LiteLLMEmbeddingService, None]:
+    """Get or create the embedding service instance."""
+    global _litellm_embedding_service
 
     try:
-        # Auto-detect provider based on model name
-        use_openai = is_openai_model(model_name)
-
-        if use_openai:
-            # Check if we have OpenAI API key
-            if not os.getenv("OPENAI_API_KEY"):
-                logger.warning(
-                    f"OpenAI model '{model_name}' requested but OPENAI_API_KEY not set, falling back to sentence-transformers"
-                )
-                # Use a default sentence-transformers model as fallback
-                model_name = "all-MiniLM-L6-v2"
-                use_openai = False
-            else:
-                if _openai_embedding_service is None or _openai_embedding_service.model_name != model_name:
-                    _openai_embedding_service = OpenAIEmbeddingService(model_name)
-                return _openai_embedding_service
-
-        # Use sentence-transformers (default or fallback)
-        if _embedding_service is None or _embedding_service.model_name != model_name:
-            # _embedding_service = EmbeddingService(model_name)
-            raise NotImplementedError(
-                "Sentence-transformers embedding service is not implemented in this version. "
-                "Please use OpenAI models or implement the sentence-transformers service."
-            )
+        # LiteLLM handles all providers - just create/reuse the service
+        if _litellm_embedding_service is None or _litellm_embedding_service.model_name != model_name:
+            _litellm_embedding_service = LiteLLMEmbeddingService(model_name)
+        return _litellm_embedding_service
 
     except Exception as e:
         error = traceback.format_exc()

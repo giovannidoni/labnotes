@@ -1,12 +1,25 @@
 website:
   dynaconf_merge: true
   name: "website"
+  llm_model: "gemini/gemini-2.0-flash"
+  embedding_model: "gemini/text-embedding-004"
+  digest:
+    top: 100
+    hours: 168
   summarise:
     prev_file_prefix: "deduped"
     save_to_supabase: true
     prompt: "summarisation"
     table_name: "raw_articles"
     max_concurrent: 5
+    model: "@format {this.llm_model}"
+  dedup:
+    model: "@format {this.embedding_model}"
+  collect:
+    model: "@format {this.llm_model}"
+    min_score: 8.0
+    min_novelty_score: 2.0
+    filter_mode: "AND"
   publish:
     slack: true
     linkedin: true
@@ -14,32 +27,49 @@ website:
 website-local:
   dynaconf_merge: true
   name: "website"
+  llm_model: "gemini/gemini-2.0-flash"
+  embedding_model: "gemini/text-embedding-004"
   summarise:
     prev_file_prefix: "deduped"
     prompt: "summarisation"
     save_to_supabase: false
     max_concurrent: 5
+    model: "@format {this.llm_model}"
+  dedup:
+    model: "@format {this.embedding_model}"
+  collect:
+    model: "@format {this.llm_model}"
+    min_score: 8.0
+    min_novelty_score: 2.0
+    filter_mode: "AND"
   digest:
-    top: 5
+    top: 100
     hours: 24
   publish:
     slack: false
     linkedin: false
-    
+
 mountainmap:
   name: "mountainmap"
+  llm_model: "gemini/gemini-2.0-flash"
+  embedding_model: "gemini/text-embedding-004"
   digest:
     top: 100
-    hours: 24
+    hours: 168
   summarise:
     prev_file_prefix: "digest"
     prompt: "summarise_enrich"
     save_to_supabase: true
     max_concurrent: 3
     table_name: "raw_post_mountainmap"
+    model: "@format {this.llm_model}"
+  dedup:
+    model: "@format {this.embedding_model}"
 
 mountainmap-local:
   name: "mountainmap"
+  llm_model: "gemini/gemini-2.0-flash"
+  embedding_model: "gemini/text-embedding-004"
   digest:
     top: 5
     hours: 24
@@ -48,4 +78,6 @@ mountainmap-local:
     prompt: "summarise_enrich"
     save_to_supabase: false
     max_concurrent: 3
-    # table_name: "raw_post_mountainmap"
+    model: "@format {this.llm_model}"
+  dedup:
+    model: "@format {this.embedding_model}"

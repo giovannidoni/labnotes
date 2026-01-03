@@ -1,14 +1,15 @@
 # Labnotes - AI Daily Digest
 
-Python-based AI digest system that fetches RSS/Atom feeds, filters articles, scores for relevance, scrapes full content, and outputs ranked digests. Includes smart deduplication using embeddings to remove similar articles.
+Python-based AI digest system that fetches RSS/Atom feeds, filters articles, scores for relevance, scrapes full content, and outputs ranked digests. Includes smart deduplication using embeddings and AI-powered summarization.
 
 ## Installation
 
 ```bash
-# Install the package in editable mode
-pip install -e .
+# Install with uv
+uv sync
 
-# This makes the labnotes command available system-wide
+# Or install the package in editable mode
+pip install -e .
 ```
 
 ## Quick Start
@@ -16,184 +17,196 @@ pip install -e .
 ### Generate a Digest
 
 ```bash
-# Basic usage - generates digest with default settings (24h lookback, top 3 items)
-labnotes
+# Basic usage - generates digest with settings from settings.yaml
+labnotes --section ai_research_and_models --out ./out
 
-# Customize parameters
-labnotes --hours 48 --top 5 --format md,json,txt --out ./output
-
-# Process only one section of feeds
-labnotes --section "AI Research & Models"
-
-# Use different embedding models for scoring
-labnotes --model text-embedding-3-small  # OpenAI (requires OPENAI_API_KEY)
-labnotes --model all-MiniLM-L6-v2        # Local sentence-transformers (default)
+# Use different scraper
+labnotes --section ai_research_and_models --scraper firecrawl --out ./out
 ```
 
 ### Deduplicate Similar Articles
 
-After generating a digest, you can remove similar articles using embedding-based similarity:
-
 ```bash
-# Basic deduplication (keeps most recent of similar articles)
-# Processes the most recent digest file in the specified section directory
-labnotes-dedup --input /path/to/digest/output --section ai_research_and_models
-
-# Keep highest scoring articles instead of most recent
-labnotes-dedup --input /path/to/digest/output --section tech_news --prefer-score
+# Remove similar articles using embedding-based similarity
+labnotes-dedup --input ./out --section ai_research_and_models
 
 # Adjust similarity threshold (0-1, higher = more strict)
-labnotes-dedup --input /path/to/digest/output --section ai_research_and_models --threshold 0.9
+labnotes-dedup --input ./out --section ai_research_and_models --threshold 0.9
 
-# Use OpenAI embeddings for better similarity detection
-labnotes-dedup --input /path/to/digest/output --section ai_research_and_models --model text-embedding-3-small
+# Keep highest scoring articles instead of most recent
+labnotes-dedup --input ./out --section ai_research_and_models --prefer-score
 ```
 
-**Output Enhancement**: The deduplication process now automatically saves embeddings as an additional field in the output JSON. Each deduplicated item will include an `embedding` field containing the vector representation used for similarity detection, enabling further analysis or custom similarity comparisons.
+### Summarize Articles
+
+```bash
+# Generate AI summaries for deduplicated articles
+labnotes-summarise --input ./out --section ai_research_and_models
+```
+
+### Collect Results
+
+```bash
+# Collect and summarize results across all sections
+labnotes-collect --input ./out
+```
 
 ## Commands
 
 - **`labnotes`** - Generate digest from RSS/Atom feeds
-- **`labnotes-dedup`** - Remove similar articles from digest output
+- **`labnotes-dedup`** - Remove similar articles using embeddings
+- **`labnotes-summarise`** - Add AI summaries to articles
+- **`labnotes-collect`** - Collect and summarize results across sections
+- **`labnotes-post`** - Publish results to Slack/LinkedIn
 
-## Configuration Files
+## Configuration
 
-### Feeds Configuration
-Feeds are configured in `labnotes/data/feeds.yaml`:
+All settings are centralized in `labnotes/settings/settings.yaml`:
+
 ```yaml
-AI Research & Models:
-  - https://arxiv.org/rss/cs.AI
-  - https://arxiv.org/rss/cs.LG
-  
-Tech News:
-  - https://feeds.feedburner.com/TechCrunch
-  - https://rss.cnn.com/rss/edition.rss
+website:
+  llm_model: "gemini/gemini-2.0-flash"      # LLM for summarization
+  embedding_model: "gemini/text-embedding-004"  # Embeddings for deduplication
+  digest:
+    top: 100
+    hours: 168
+  summarise:
+    model: "@format {this.llm_model}"  # Inherits from top-level
+    max_concurrent: 5
+  dedup:
+    model: "@format {this.embedding_model}"  # Inherits from top-level
+  collect:
+    model: "@format {this.llm_model}"
+    min_score: 8.0
+    min_novelty_score: 2.0
+    filter_mode: "AND"
 ```
 
-Convert OPML to YAML:
+### Environment Selection
+
+Use `ENV_FOR_DYNACONF` to select configuration:
+
 ```bash
-python -m labnotes.opml_to_yaml feeds.opml -o labnotes/data/feeds.yaml
+ENV_FOR_DYNACONF=website labnotes --section ai_research_and_models
+ENV_FOR_DYNACONF=website-local labnotes --section ai_research_and_models
+```
+
+### Feeds Configuration
+
+Feeds are configured in `labnotes/data/feeds.yaml`:
+
+```yaml
+ai_research_and_models:
+  - https://arxiv.org/rss/cs.AI
+  - https://arxiv.org/rss/cs.LG
+
+community_signals:
+  - https://hnrss.org/frontpage
 ```
 
 ### Keywords Configuration
+
 Scoring keywords in `labnotes/settings/website/keywords.json`:
+
 ```json
 {
-  "must": ["AI", "machine learning", "LLM"],
-  "nice": ["research", "breakthrough", "model"],
-  "source_weight": {
-    "plus": ["arxiv.org", "nature.com"],
-    "minus": ["clickbait.com"]
+  "audiences": {
+    "manager": {
+      "must": ["AI", "strategy"],
+      "nice": ["research", "breakthrough"]
+    }
   }
 }
 ```
 
 ## Web Scraping Options
 
-The system supports multiple scraping methods that are automatically selected:
+```bash
+# Newspaper3k (default) - best for news articles
+labnotes --section ai_research_and_models --scraper newspaper
 
-### 1. Newspaper3k (Default)
-- **Best for**: News articles, blog posts, most content sites
-- **Pros**: Designed for article extraction, handles many edge cases
-- **Setup**: No additional setup required
+# BeautifulSoup - lightweight HTML parsing
+labnotes --section ai_research_and_models --scraper beautifulsoup
 
-### 2. OpenAI Embeddings
-- **Best for**: High-quality similarity detection and deduplication
-- **Models**: `text-embedding-3-small`, `text-embedding-3-large`, `text-embedding-ada-002`
-- **Setup**: Set `OPENAI_API_KEY` environment variable
-- **Usage**: Automatically detected by model name
-
-### 3. Firecrawl (Premium)
-- **Best for**: JavaScript-heavy sites, maximum content quality
-- **Setup**: Set `FIRECRAWL_API_KEY` environment variable
-- **Usage**: Add `--scraper firecrawl` to labnotes command
-
-### 4. Sentence Transformers (Local)
-- **Best for**: Privacy-focused embedding generation
-- **Models**: `all-MiniLM-L6-v2`, `all-mpnet-base-v2`, etc.
-- **Setup**: No additional setup required (downloads models automatically)
-
-## Features
-
-### Core Functionality
-- **RSS/Atom parsing**: Fetches from curated feeds with async processing
-- **Smart web scraping**: Multiple scraping methods with intelligent fallbacks
-- **Time filtering**: Configurable lookback window (hours, days)
-- **Content quality filtering**: Removes low-quality content automatically
-- **Relevance scoring**: Keyword matching and source weighting
-- **Multiple outputs**: Markdown, JSON, and plain text formats
-
-### Advanced Features
-- **Embedding-based deduplication**: Remove similar articles using AI embeddings
-- **Provider auto-detection**: Automatically chooses OpenAI vs local embeddings based on model name
-- **Section-based processing**: Process specific feed categories
-- **Concurrent processing**: Async fetching and content scraping for speed
+# Firecrawl - JavaScript-heavy sites (requires FIRECRAWL_API_KEY)
+labnotes --section ai_research_and_models --scraper firecrawl
+```
 
 ## Environment Variables
 
 ```bash
-# Optional: For OpenAI embeddings (better similarity detection)
-export OPENAI_API_KEY=your_openai_api_key
+# Required: For Gemini models
+export GEMINI_API_KEY=your_gemini_api_key
 
-# Optional: For premium web scraping
+# Optional: For Firecrawl scraping
 export FIRECRAWL_API_KEY=your_firecrawl_api_key
+
+# Optional: For Supabase storage
+export SUPABASE_URL=your_supabase_url
+export SUPABASE_TOKEN=your_supabase_token
+
+# Optional: For publishing
+export SLACK_BOT_TOKEN=your_slack_token
+export LINKEDIN_API_TOKEN=your_linkedin_token
 ```
 
-## Examples
-
-### Complete Workflow
+## Complete Workflow
 
 ```bash
-# 1. Generate initial digest
-labnotes --hours 24 --top 10 --format json --out ./output
+# Set environment
+export ENV_FOR_DYNACONF=website
+export GEMINI_API_KEY=your_key
 
-# 2. Remove similar articles
-labnotes-dedup --input ./output --section ai_research_and_models --threshold 0.85
+# 1. Generate digest
+labnotes --section ai_research_and_models --out ./out
 
-# 3. Generate final markdown output
-labnotes --hours 24 --top 5 --format md --out ./final
+# 2. Deduplicate similar articles
+labnotes-dedup --input ./out --section ai_research_and_models
+
+# 3. Summarize articles
+labnotes-summarise --input ./out --section ai_research_and_models
+
+# 4. Collect results
+labnotes-collect --input ./out
+
+# 5. Publish (optional)
+labnotes-post
 ```
 
-### Advanced Usage
+Or use the provided scripts:
 
 ```bash
-# High-quality processing with OpenAI
-export OPENAI_API_KEY=your_key
-labnotes --model text-embedding-3-small --scraper firecrawl
-labnotes-dedup --input ./output --section ai_research_and_models --model text-embedding-3-small --threshold 0.9
-
-# Privacy-focused local processing
-labnotes --model all-MiniLM-L6-v2
-labnotes-dedup --input ./output --section ai_research_and_models --model all-mpnet-base-v2
+./labnotes/scripts/exec_website.sh
+./labnotes/scripts/exec_mountainmap.sh
 ```
 
 ## File Structure
 
 ```
 labnotes/
-├── __init__.py
 ├── digest.py          # Main digest generation
 ├── deduplicate.py     # Similarity-based deduplication
-├── embeddings.py      # Embedding generation (OpenAI + local)
-├── similarity.py      # Similarity detection algorithms
+├── summarise.py       # AI summarization
+├── collect.py         # Result collection
+├── post.py            # Publishing to Slack/LinkedIn
+├── embeddings.py      # Embedding generation (LiteLLM)
+├── similarity.py      # Similarity detection
 ├── scraping.py        # Web content scraping
-├── utils.py           # Utilities and logging
-├── opml_to_yaml.py    # OPML conversion utility
+├── settings/
+│   └── settings.yaml  # Centralized configuration
 ├── data/
-│   ├── feeds.yaml     # RSS/Atom feed configuration
-│   └── keywords.json  # Scoring keywords and weights
-└── templates/
-    ├── markdown.md.j2 # Markdown output template
-    └── text.txt.j2    # Plain text output template
+│   └── feeds.yaml     # RSS/Atom feed configuration
+└── scripts/
+    ├── exec_website.sh
+    └── exec_mountainmap.sh
 ```
 
 ## Development
 
 ```bash
 # Install in development mode
-pip install -e .
+uv sync
 
 # Run with debug logging
-labnotes --log-level DEBUG
-labnotes-dedup --input ./output --section ai_research_and_models --log-level DEBUG
+labnotes --section ai_research_and_models --log-level DEBUG
 ```

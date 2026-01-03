@@ -5,20 +5,21 @@ Adds summary and novelty score fields to JSON items.
 """
 
 import argparse
-import json
 import asyncio
+import json
 import logging
-import sys
 import os
-from pathlib import Path
-from typing import List, Dict, Any, Optional
-import openai
+import sys
 import traceback
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
-from labnotes.tools.utils import setup_logging, find_most_recent_file
-from labnotes.tools.io import save_output, load_input, save_to_supabase
+from litellm import acompletion
+
 from labnotes.schemas import schemas
 from labnotes.settings import settings
+from labnotes.tools.io import load_input, save_output, save_to_supabase
+from labnotes.tools.utils import find_most_recent_file, setup_logging
 
 logger = logging.getLogger(__name__)
 
@@ -47,28 +48,23 @@ def load_prompt_template(prompt_type) -> str:
 
 
 class SummarisationService:
-    """Service for generating summaries using OpenAI's chat models."""
+    """Service for generating summaries using LiteLLM (supports multiple providers)."""
 
-    def __init__(self, model_name: str = "gpt-4o-mini", max_concurrent: int = 3):
+    def __init__(self, model_name: str, max_concurrent: int = 3):
         """Initialize the summarisation service."""
         self.model_name = model_name
-        self.client = None
         self.initialized = False
         self.prompt_template = None
         self.semaphore = asyncio.Semaphore(max_concurrent)
 
     def _ensure_initialized(self) -> bool:
-        """Lazy initialize the OpenAI client."""
+        """Lazy initialize the summarisation service."""
         if self.initialized:
             return True
 
         try:
-            api_key = os.getenv("OPENAI_API_KEY")
-            if not api_key:
-                logger.error("OPENAI_API_KEY environment variable not set")
-                return False
-
-            self.client = openai.OpenAI(api_key=api_key)
+            # LiteLLM auto-detects API keys from environment variables
+            # GEMINI_API_KEY for Gemini, OPENAI_API_KEY for OpenAI, etc.
             self.prompt_template = load_prompt_template(settings.summarise.prompt)
 
             if not self.prompt_template:
@@ -118,20 +114,16 @@ class SummarisationService:
                 # Define the JSON schema for structured output
                 response_schema = schemas[settings.summarise.prompt]
 
-                # Run OpenAI API call in thread pool to avoid blocking
-                loop = asyncio.get_event_loop()
-                response = await loop.run_in_executor(
-                    None,
-                    lambda: self.client.chat.completions.create(
-                        model=self.model_name,
-                        messages=[{"role": "user", "content": full_prompt}],
-                        temperature=0.3,
-                        max_tokens=200,
-                        response_format={
-                            "type": "json_schema",
-                            "json_schema": {"name": "article_summary", "schema": response_schema, "strict": True},
-                        },
-                    ),
+                # Use native async LiteLLM call
+                response = await acompletion(
+                    model=self.model_name,
+                    messages=[{"role": "user", "content": full_prompt}],
+                    temperature=0.3,
+                    max_tokens=200,
+                    response_format={
+                        "type": "json_object",
+                        "response_schema": response_schema,
+                    },
                 )
 
                 summary_response = response.choices[0].message.content.strip()
@@ -190,7 +182,7 @@ class SummarisationService:
 
 async def summarise_digest(
     items: List[Dict[str, Any]],
-    model_name: str = "gpt-4o-mini",
+    model_name: str,
     max_concurrent: int = 3,
 ) -> List[Dict[str, Any]]:
     """
@@ -215,11 +207,6 @@ async def main_async():
         "--section", required=True, help="process only one section/group from feeds (e.g., 'ai_research_and_models')"
     )
     parser.add_argument(
-        "--model",
-        default="gpt-4o-mini",
-        help="OpenAI model name for summarisation (e.g., gpt-4o-mini, gpt-4o, gpt-3.5-turbo)",
-    )
-    parser.add_argument(
         "--log-level", choices=["DEBUG", "INFO", "WARNING", "ERROR"], default="INFO", help="Set logging level"
     )
     args = parser.parse_args()
@@ -232,7 +219,9 @@ async def main_async():
 
     # Find the most recent JSON file in the input path
     try:
-        input_file = find_most_recent_file(input_path, pattern=f"{args.section}*{settings.summarise.prev_file_prefix}_*.json")
+        input_file = find_most_recent_file(
+            input_path, pattern=f"{args.section}*{settings.summarise.prev_file_prefix}_*.json"
+        )
     except FileNotFoundError as e:
         logger.info("No deduped files found, please run the digest and deduped command first.")
         return 0
@@ -249,10 +238,9 @@ async def main_async():
             logger.warning("No items to process")
             return 0
 
-        # summarise
         summarised = await summarise_digest(
             items,
-            model_name=args.model,
+            model_name=settings.summarise.model,
             max_concurrent=settings.summarise.max_concurrent,
         )
 
@@ -261,7 +249,7 @@ async def main_async():
 
         # Save results
         if len(summarised) > 0 and settings.summarise.save_to_supabase:
-            save_to_supabase(summarised,  settings.summarise.table_name)
+            save_to_supabase(summarised, settings.summarise.table_name)
 
         # Report statistics
         summary_count = sum(1 for item in summarised if item.get("summary"))

@@ -5,9 +5,6 @@ on:
     - cron: '0 12 * * 1'  # Every day at 12:00 PM UTC
   workflow_dispatch:
     inputs:
-      top:
-        description: 'Number of sources to process'
-        required: false
       only:
         description: 'Pipeline to run (leave empty to run both)'
         required: false
@@ -47,7 +44,7 @@ jobs:
 
       - name: Verify secrets are configured
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
           WEBHOOK_TOKEN: ${{ secrets.WEBHOOK_TOKEN }}
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
@@ -58,7 +55,7 @@ jobs:
           echo "Checking secrets availability..."
           
           required_secrets=(
-            OPENAI_API_KEY
+            GEMINI_API_KEY
             FIRECRAWL_API_KEY
             WEBHOOK_TOKEN
             SLACK_BOT_TOKEN
@@ -85,7 +82,7 @@ jobs:
 
     env:
       REPO: labnotes
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       SUPABASE_TOKEN: ${{ secrets.SUPABASE_TOKEN }}
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
 
@@ -113,13 +110,13 @@ jobs:
       - name: Run workflow
         run: |
           docker run -v $(pwd)/out:/app/out \
-          -e OPENAI_API_KEY="$OPENAI_API_KEY" \
+          -e GEMINI_API_KEY="$GEMINI_API_KEY" \
           -e FIRECRAWL_API_KEY="$FIRECRAWL_API_KEY" \
           -e SUPABASE_TOKEN="$SUPABASE_TOKEN" \
           -e SUPABASE_URL="$SUPABASE_URL" \
           -e ENV_FOR_DYNACONF="website" \
           ${{ env.REPO }} \
-          /bin/bash  ./labnotes/scripts/exec_website.sh ${{ inputs.top }}
+          /bin/bash ./labnotes/scripts/exec_website.sh
 
           ls -la ./out/
           
@@ -164,7 +161,7 @@ jobs:
 
     env:
       REPO: labnotes
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       SUPABASE_TOKEN: ${{ secrets.SUPABASE_TOKEN }}
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
 
@@ -185,12 +182,12 @@ jobs:
       - name: Run workflow
         run: |
           docker run -v $(pwd)/out:/app/out \
-          -e OPENAI_API_KEY="$OPENAI_API_KEY" \
+          -e GEMINI_API_KEY="$GEMINI_API_KEY" \
           -e FIRECRAWL_API_KEY="$FIRECRAWL_API_KEY" \
           -e SUPABASE_TOKEN="$SUPABASE_TOKEN" \
           -e SUPABASE_URL="$SUPABASE_URL" \
           -e ENV_FOR_DYNACONF="mountainmap" \
           ${{ env.REPO }} \
-          /bin/bash ./labnotes/scripts/exec_mountainmap.sh ${{ inputs.top }}
+          /bin/bash ./labnotes/scripts/exec_mountainmap.sh
 
           ls -la ./out/

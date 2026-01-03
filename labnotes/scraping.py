@@ -6,15 +6,15 @@ Supports multiple scraping methods including newspaper3k, BeautifulSoup, and Fir
 import asyncio
 import logging
 import re
+import traceback
 from enum import Enum
 from typing import Optional, Tuple
 from urllib.parse import urlparse
-import traceback
 
 import aiohttp
 from bs4 import BeautifulSoup
-from newspaper import Article
 from firecrawl import FirecrawlApp
+from newspaper import Article
 
 logger = logging.getLogger(__name__)
 

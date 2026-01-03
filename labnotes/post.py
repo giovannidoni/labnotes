@@ -1,13 +1,14 @@
-import requests
-import traceback
 import logging
-import sys
 import os
+import sys
+import traceback
 from datetime import datetime as dt
 
-from labnotes.tools.utils import setup_logging
-from labnotes.tools.io import load_input
+import requests
+
 from labnotes.settings import settings
+from labnotes.tools.io import load_input
+from labnotes.tools.utils import setup_logging
 
 logger = logging.getLogger(__name__)
 
@@ -136,6 +137,7 @@ def _main():
 
     # Build blocks array properly
     blocks = get_slack_blocks(data)
+    logger.info(blocks)
 
     # Send to Slack
     if settings.publish.slack:
@@ -144,6 +146,7 @@ def _main():
 
     # Build block for LinkedIn post
     text = get_linkedin_block(data)
+    logger.info(text)
 
     # Send to LinkedIn
     if dt.now().weekday() == 0 and settings.publish.linkedin:

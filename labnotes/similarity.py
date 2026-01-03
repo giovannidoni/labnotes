@@ -4,10 +4,11 @@ Removes items that are too similar to each other, keeping the most recent ones.
 """
 
 import logging
-from typing import List, Dict, Any, Tuple, Optional
-from datetime import datetime
-import numpy as np
 import traceback
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
+
+import numpy as np
 
 from labnotes.embeddings import get_embedding_service
 
@@ -55,16 +56,21 @@ def parse_date_for_comparison(date_str: str) -> datetime:
 
 
 async def remove_similar_items(
-    items: List[Dict[str, Any]], similarity_threshold: float = 0.85, model_name: str = "all-MiniLM-L6-v2"
+    items: List[Dict[str, Any]], model_name: str, similarity_threshold: float = 0.85
 ) -> List[Dict[str, Any]]:
     """Remove items that are too similar to each other, keeping the most recent ones."""
     if not items:
         return items
 
     # Determine provider from model name
-    from labnotes.embeddings import is_openai_model
+    from labnotes.embeddings import is_gemini_model, is_openai_model
 
-    provider = "OpenAI" if is_openai_model(model_name) else "sentence-transformers"
+    if is_gemini_model(model_name):
+        provider = "Gemini"
+    elif is_openai_model(model_name):
+        provider = "OpenAI"
+    else:
+        provider = "LiteLLM"
     logger.info(
         f"Starting similarity-based deduplication on {len(items)} items "
         f"(threshold: {similarity_threshold}, model: {model_name}, provider: {provider})"

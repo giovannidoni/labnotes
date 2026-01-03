@@ -3,12 +3,11 @@ sections=(
     "community_signals"
     "engineering_leadership_and_management"
 )
-TOP=${1:-100}
-echo $TOP
+
 for section in "${sections[@]}"
 do
     echo "Running labnotes for section: $section"
-    uv run labnotes --hours 168 *  --top $TOP --section $section --out ./out --log-level INFO
+    uv run labnotes --section $section --out ./out --log-level INFO
 done
 
 for section in "${sections[@]}"
