@@ -153,41 +153,41 @@ jobs:
           ${{ env.REPO }} \
           uv run labnotes-post
 
-  mountainmap:
-    needs: build-test
-    if: ${{ !inputs.only || inputs.only == '' || inputs.only == 'mountainmap' }}
-    runs-on: ubuntu-latest
-    environment: labnotes  # Add this line to use environment secrets
+  # mountainmap:
+  #   needs: build-test
+  #   if: ${{ !inputs.only || inputs.only == '' || inputs.only == 'mountainmap' }}
+  #   runs-on: ubuntu-latest
+  #   environment: labnotes  # Add this line to use environment secrets
 
-    env:
-      REPO: labnotes
-      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-      SUPABASE_TOKEN: ${{ secrets.SUPABASE_TOKEN }}
-      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+  #   env:
+  #     REPO: labnotes
+  #     GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+  #     SUPABASE_TOKEN: ${{ secrets.SUPABASE_TOKEN }}
+  #     SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
 
-      - name: Download Docker image
-        uses: actions/download-artifact@v4
-        with:
-          name: docker-image
-          path: /tmp/
+  #     - name: Download Docker image
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: docker-image
+  #         path: /tmp/
 
-      - name: Load Docker image
-        run: |
-          docker load < /tmp/labnotes-image.tar
+  #     - name: Load Docker image
+  #       run: |
+  #         docker load < /tmp/labnotes-image.tar
 
-      - name: Run workflow
-        run: |
-          docker run -v $(pwd)/out:/app/out \
-          -e GEMINI_API_KEY="$GEMINI_API_KEY" \
-          -e FIRECRAWL_API_KEY="$FIRECRAWL_API_KEY" \
-          -e SUPABASE_TOKEN="$SUPABASE_TOKEN" \
-          -e SUPABASE_URL="$SUPABASE_URL" \
-          -e ENV_FOR_DYNACONF="mountainmap" \
-          ${{ env.REPO }} \
-          /bin/bash ./labnotes/scripts/exec_mountainmap.sh
+  #     - name: Run workflow
+  #       run: |
+  #         docker run -v $(pwd)/out:/app/out \
+  #         -e GEMINI_API_KEY="$GEMINI_API_KEY" \
+  #         -e FIRECRAWL_API_KEY="$FIRECRAWL_API_KEY" \
+  #         -e SUPABASE_TOKEN="$SUPABASE_TOKEN" \
+  #         -e SUPABASE_URL="$SUPABASE_URL" \
+  #         -e ENV_FOR_DYNACONF="mountainmap" \
+  #         ${{ env.REPO }} \
+  #         /bin/bash ./labnotes/scripts/exec_mountainmap.sh
 
-          ls -la ./out/
+  #         ls -la ./out/
