@@ -22,7 +22,7 @@ website:
     filter_mode: "AND"
   publish:
     slack: true
-    linkedin: true
+    linkedin: false
 
 website-local:
   dynaconf_merge: true
