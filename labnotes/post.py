@@ -24,7 +24,13 @@ def get_article_block(item):
     """Generate a Slack block for an article."""
     return {
         "type": "section",
-        "text": {"type": "mrkdwn", "text": f"*{item['summary']}*\n<{item['link']}|Read More>"},
+        "text": {"type": "mrkdwn", "text": f"*{item['summary']}*"},
+        "accessory": {
+            "type": "button",
+            "text": {"type": "plain_text", "text": "Read More"},
+            "url": item["link"],
+            "action_id": "button_click"
+        },
     }
 
 
