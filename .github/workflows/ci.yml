@@ -131,8 +131,8 @@ jobs:
           
           # Check if file exists
           if [ -f "./out/summarised_results.json" ]; then
-            aws s3 cp ./out/summarised_results.json s3://labnotes-storage/$DATE_PATH/summarised_results.json
-            echo "s3_file_path=$DATE_PATH/summarised_results.json" >> $GITHUB_OUTPUT
+            aws s3 cp ./out/summarised_results.json s3://labnotes-storage/website/$DATE_PATH/summarised_results.json
+            echo "s3_file_path=website/$DATE_PATH/summarised_results.json" >> $GITHUB_OUTPUT
             echo "publish_success=true" >> $GITHUB_OUTPUT
           else
             echo "No collect files found in ./out/"
@@ -239,8 +239,8 @@ jobs:
           S3_KEY="aria-padana/${DATE_PATH}/aria_padana.png"
 
           if [ -f "./out/aria_padana.png" ]; then
-            aws s3 cp ./out/aria_padana.png s3://labnotes-storage/${S3_KEY} --content-type "image/png"
-            IMAGE_URL="https://labnotes-storage.s3.eu-west-2.amazonaws.com/${S3_KEY}"
+            aws s3 cp ./out/aria_padana.png s3://labnotes-storage/aria-padana/${S3_KEY} --content-type "image/png"
+            IMAGE_URL="https://labnotes-storage.s3.eu-west-2.amazonaws.com/aria-padana/${S3_KEY}"
             echo "image_url=${IMAGE_URL}" >> $GITHUB_OUTPUT
             echo "Uploaded image to: ${IMAGE_URL}"
           else
