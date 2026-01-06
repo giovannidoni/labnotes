@@ -59,26 +59,27 @@ CITY_CENTERS = {
 
 
 # AQI level descriptions (European AQI scale) - in Italian
+# Emojis chosen to best match the EEA colormap
 AQI_LEVELS = {
-    1: ("Buona", "🟢"),
-    2: ("Discreta", "🟡"),
-    3: ("Moderata", "🟠"),
-    4: ("Scarsa", "🔴"),
-    5: ("Molto Scarsa", "🟣"),
-    6: ("Pessima", "⚫"),
+    1: ("Buona", "🔵"),      # cyan (80,240,230) → blue is closest
+    2: ("Discreta", "🟢"),   # teal (80,204,170) → green
+    3: ("Moderata", "🟡"),   # yellow (240,230,65)
+    4: ("Scarsa", "🔴"),     # red (255,80,80)
+    5: ("Molto Scarsa", "🟤"),  # dark red (150,0,50) → brown is closest
+    6: ("Pessima", "🟣"),    # purple (125,33,129)
 }
 
 # Base URLs for the EEA ArcGIS service
 BASE_URL = "https://air.discomap.eea.europa.eu/arcgis/rest/services/AQMobile_2025/MOSAIC_GLOBAL_AQI/ImageServer"
 
-# AQI colors (RGB) matching the EEA colormap
+# AQI colors (RGB) matching the EEA colormap used in the API request
 AQI_COLORS = {
-    1: (80, 240, 230),   # Buona - cyan
-    2: (80, 204, 170),   # Discreta - green
-    3: (240, 230, 65),   # Moderata - yellow
-    4: (255, 80, 80),    # Scarsa - red
-    5: (150, 0, 50),     # Molto Scarsa - dark red
-    6: (125, 33, 129),   # Pessima - purple
+    1: (80, 240, 230),    # Buona - cyan
+    2: (80, 204, 170),    # Discreta - teal/green
+    3: (240, 230, 65),    # Moderata - yellow
+    4: (255, 80, 80),     # Scarsa - red
+    5: (150, 0, 50),      # Molto Scarsa - dark red/maroon
+    6: (125, 33, 129),    # Pessima - purple
 }
 
 def add_legend_to_image(image_path: str, city_stats: list[dict] | None = None) -> None:
@@ -206,7 +207,7 @@ def add_legend_to_image(image_path: str, city_stats: list[dict] | None = None) -
             # Panel dimensions - similar to legend style
             box_size = 28
             line_height = 38
-            num_cities = min(len(sorted_stats), 12)
+            num_cities = len(sorted_stats)  # Show all cities
             rows_per_col = (num_cities + 1) // 2
             panel_padding = 18
             panel_height = panel_padding * 2 + rows_per_col * line_height
@@ -241,8 +242,8 @@ def add_legend_to_image(image_path: str, city_stats: list[dict] | None = None) -
 
                     y_pos = start_y + row * line_height
 
-                    # Draw colored box (like legend)
-                    draw.rectangle(
+                    # Draw colored circle
+                    draw.ellipse(
                         [col_x, y_pos, col_x + box_size, y_pos + box_size],
                         fill=color,
                         outline=(255, 255, 255, 200),
