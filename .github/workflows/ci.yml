@@ -2,17 +2,19 @@ name: CI - Build and Test Docker Image
 
 on:
   schedule:
-    - cron: '0 12 * * 1'  # Every day at 12:00 PM UTC
+    - cron: '0 12 * * 1'  # Website: Mondays at 12:00 PM UTC
+    - cron: '0 8 * * *'   # Aria Padana: Daily at 8:00 AM UTC
   workflow_dispatch:
     inputs:
       only:
-        description: 'Pipeline to run (leave empty to run both)'
+        description: 'Pipeline to run (leave empty to run all)'
         required: false
         type: choice
         options:
           - ""
           - website
           - mountainmap
+          - aria-padana
 
 jobs:
   build-test:
@@ -76,7 +78,7 @@ jobs:
 
   website:
     needs: build-test
-    if: ${{ !inputs.only || inputs.only == '' || inputs.only == 'website' }}
+    if: ${{ github.event.schedule == '0 12 * * 1' || inputs.only == '' || inputs.only == 'website' }}
     runs-on: ubuntu-latest
     environment: labnotes  # Add this line to use environment secrets
 
@@ -191,3 +193,70 @@ jobs:
   #         /bin/bash ./labnotes/scripts/exec_mountainmap.sh
 
   #         ls -la ./out/
+
+  aria-padana:
+    needs: build-test
+    if: ${{ github.event.schedule == '0 8 * * *' || inputs.only == '' || inputs.only == 'aria-padana' }}
+    runs-on: ubuntu-latest
+    environment: labnotes
+
+    env:
+      REPO: labnotes
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-2
+
+      - name: Download Docker image
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+          path: /tmp/
+
+      - name: Load Docker image
+        run: |
+          docker load < /tmp/labnotes-image.tar
+
+      - name: Fetch air quality data
+        run: |
+          docker run -v $(pwd)/out:/app/out \
+            ${{ env.REPO }} \
+            uv run labnotes-aria-padana
+
+          ls -la ./out/
+
+      - name: Upload image to S3
+        id: s3_upload
+        run: |
+          DATE_PATH=$(date +"%Y/%m/%d")
+          S3_KEY="aria-padana/${DATE_PATH}/aria_padana.png"
+
+          if [ -f "./out/aria_padana.png" ]; then
+            aws s3 cp ./out/aria_padana.png s3://labnotes-storage/${S3_KEY} --content-type "image/png"
+            IMAGE_URL="https://labnotes-storage.s3.eu-west-2.amazonaws.com/${S3_KEY}"
+            echo "image_url=${IMAGE_URL}" >> $GITHUB_OUTPUT
+            echo "Uploaded image to: ${IMAGE_URL}"
+          else
+            echo "Image file not found"
+            exit 1
+          fi
+
+      - name: Post to Instagram
+        env:
+          INSTAGRAM_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
+          INSTAGRAM_BUSINESS_ACCOUNT_ID: ${{ secrets.INSTAGRAM_BUSINESS_ACCOUNT_ID }}
+          ARIA_PADANA_IMAGE_URL: ${{ steps.s3_upload.outputs.image_url }}
+        run: |
+          docker run -v $(pwd)/out:/app/out \
+            -e INSTAGRAM_ACCESS_TOKEN="$INSTAGRAM_ACCESS_TOKEN" \
+            -e INSTAGRAM_BUSINESS_ACCOUNT_ID="$INSTAGRAM_BUSINESS_ACCOUNT_ID" \
+            -e ARIA_PADANA_IMAGE_URL="$ARIA_PADANA_IMAGE_URL" \
+            ${{ env.REPO }} \
+            uv run labnotes-aria-padana-post

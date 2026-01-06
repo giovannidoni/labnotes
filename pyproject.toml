@@ -21,6 +21,7 @@ dependencies = [
   "dynaconf>=3.2.11",
   "firecrawl>=4.3.1",
   "trafilatura>=1.6.0",
+  "pillow>=10.0.0",
 ]
 
 [build-system]
@@ -49,6 +50,8 @@ labnotes-dedup = "labnotes.deduplicate:main"
 labnotes-summarise = "labnotes.summarise:main"
 labnotes-collect = "labnotes.collect:main"
 labnotes-post = "labnotes.post:main"
+labnotes-aria-padana = "labnotes.aria_padana:main"
+labnotes-aria-padana-post = "labnotes.aria_padana:post_main"
 
 [tool.setuptools.packages.find]
 where = ["."]

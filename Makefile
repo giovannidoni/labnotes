@@ -8,6 +8,7 @@ clean:
 	find . -type f -name "*.log"           -delete
 	rm -rf build/ dist/ *.egg-info
 	rm -rf .pytest_cache/ .mypy_cache/
+	rm -rf out.*
 
 ## install: install project dependencies
 install:
