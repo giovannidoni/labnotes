@@ -28,14 +28,35 @@ CITY_BBOXES = {
     "Brescia": "1126772,5697192,1146772,5717192",
     "Bergamo": "1067272,5722133,1087272,5742133",
     "Verona": "1213657,5680805,1233657,5700805",
-    "Padova": "1312119,5675729,1332119,5695729",
     "Venezia": "1360955,5681185,1380955,5701185",
     "Bologna": "1252652,5532351,1272652,5552351",
-    "Modena": "1206188,5556135,1226188,5576135",
     "Parma": "1139697,5580326,1159697,5600326",
     "Trieste": "1523626,5714358,1543626,5734358",
     "Trento": "1227995,5782344,1247995,5802344",
+    "Udine":  "1463267,5781745,1483267,5801745",
+    "Bolzano": "1254006,5850564,1274006,5870564",
+    "Ferrara": "1283509,5586073,1303509,5606073"
 }
+
+
+# City center coordinates (EPSG:3857) - center of bounding boxes
+CITY_CENTERS = {
+    "Torino": (855702, 5632596),
+    "Milano": (1023026, 5694899),
+    "Genova": (995898, 5528426),
+    "Brescia": (1136772, 5707192),
+    "Bergamo": (1077272, 5732133),
+    "Verona": (1223657, 5690805),
+    "Venezia": (1370955, 5691185),
+    "Bologna": (1262652, 5542351),
+    "Parma": (1149697, 5590326),
+    "Trieste": (1533626, 5724358),
+    "Trento": (1237995, 5792344),
+    "Udine":   (1473267, 5791745),
+    "Bolzano": (1264006, 5860564),
+    "Ferrara": (1293509, 5596073)
+}
+
 
 # AQI level descriptions (European AQI scale) - in Italian
 AQI_LEVELS = {
@@ -60,20 +81,6 @@ AQI_COLORS = {
     6: (125, 33, 129),   # Pessima - purple
 }
 
-# City center coordinates (EPSG:3857) - center of bounding boxes
-CITY_CENTERS = {
-    "Torino": (855702, 5632596),
-    "Milano": (1023026, 5694899),
-    "Brescia": (1136772, 5707192),
-    "Bergamo": (1077272, 5732133),
-    "Verona": (1223657, 5690805),
-    "Padova": (1322119, 5685729),
-    "Venezia": (1370955, 5691185),
-    "Bologna": (1262652, 5542351),
-    "Parma": (1149697, 5590326),
-}
-
-
 def add_legend_to_image(image_path: str, city_stats: list[dict] | None = None) -> None:
     """
     Add a semi-transparent legend overlay and city labels to the air quality image.
@@ -95,12 +102,13 @@ def add_legend_to_image(image_path: str, city_stats: list[dict] | None = None) -
         bbox_y_min = center_y - height / 2
         bbox_y_max = center_y + height / 2
 
-        # Legend dimensions - two rows layout
-        legend_height = 110
-        box_size = 32
+        # Legend dimensions - two rows, aligned columns
+        legend_height = 120
+        box_size = 36
         box_spacing = 10
-        font_size = 26
-        row_spacing = 12
+        font_size = 28
+        row_spacing = 14
+        col_width = 340  # Fixed column width for alignment
 
         # Create overlay for legend background
         overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
@@ -110,12 +118,12 @@ def add_legend_to_image(image_path: str, city_stats: list[dict] | None = None) -
         legend_y = img.height - legend_height
         draw.rectangle(
             [0, legend_y, img.width, img.height],
-            fill=(0, 0, 0, 180)  # Semi-transparent black
+            fill=(0, 0, 0, 200)  # Semi-transparent black
         )
 
         # Try to use a nice font, fall back to default
         try:
-            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", font_size)
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", font_size)
         except (OSError, IOError):
             try:
                 font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", font_size)
@@ -128,56 +136,123 @@ def add_legend_to_image(image_path: str, city_stats: list[dict] | None = None) -
         row2 = items[3:]
 
         for row_idx, row_items in enumerate([row1, row2]):
-            # Calculate layout for this row
-            labels = [label for _, (label, _) in row_items]
-            item_widths = [box_size + box_spacing + draw.textbbox((0, 0), label, font=font)[2] + 20 for label in labels]
-            total_width = sum(item_widths)
+            # Start position for row (centered)
+            total_width = col_width * len(row_items)
             x_start = (img.width - total_width) // 2
 
-            y_pos = legend_y + 12 + row_idx * (box_size + row_spacing)
+            y_pos = legend_y + 14 + row_idx * (box_size + row_spacing)
 
             for i, (level, (label, _)) in enumerate(row_items):
                 color = AQI_COLORS[level]
+                col_x = x_start + i * col_width
 
                 # Draw colored box
                 draw.rectangle(
-                    [x_start, y_pos, x_start + box_size, y_pos + box_size],
+                    [col_x, y_pos, col_x + box_size, y_pos + box_size],
                     fill=color,
-                    outline=(255, 255, 255, 200),
-                    width=1
+                    outline=(255, 255, 255, 220),
+                    width=2
                 )
 
                 # Draw label in white
                 label_y = y_pos + (box_size - font_size) // 2
-                draw.text((x_start + box_size + box_spacing, label_y), label, fill=(255, 255, 255, 255), font=font)
+                draw.text((col_x + box_size + box_spacing, label_y), label, fill=(255, 255, 255, 255), font=font)
 
-                x_start += item_widths[i]
-
-        # Add title at top with date
-        today = dt.now().strftime("%d/%m/%Y - %H:%M")
-        title = f"@aria.padana - {today}"
+        # Add title bar at top (two lines: title centered, date below)
+        title_text = "Qualità dell'aria - @aria.padana"
+        date_text = dt.now().strftime("%d/%m/%Y - %H:%M")
         try:
             title_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 28)
+            date_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 18)
         except (OSError, IOError):
             try:
                 title_font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 28)
+                date_font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 18)
             except (OSError, IOError):
                 title_font = font
+                date_font = font
 
-        # Draw title background (multiline)
-        title_bbox = draw.multiline_textbbox((0, 0), title, font=title_font, align="center")
-        title_width = title_bbox[2] - title_bbox[0]
-        title_height = title_bbox[3] - title_bbox[1]
-        title_x = (img.width - title_width) // 2
-        title_y = 15
+        title_bar_height = 70
+        from_top = 8
+        draw.rectangle([0, from_top, img.width, title_bar_height + from_top], fill=(0, 0, 0, 220))
 
-        # Semi-transparent background for title
-        padding = 14
-        draw.rectangle(
-            [title_x - padding, title_y - padding // 2, title_x + title_width + padding, title_y + title_height + padding],
-            fill=(0, 0, 0, 180)
-        )
-        draw.multiline_text((title_x, title_y), title, fill=(255, 255, 255, 255), font=title_font, align="center")
+        # Draw title centered
+        title_bbox = draw.textbbox((0, 0), title_text, font=title_font)
+        title_x = (img.width - (title_bbox[2] - title_bbox[0])) // 2
+        draw.text((title_x, 14), title_text, fill=(255, 255, 255, 255), font=title_font)
+
+        # Draw date/time centered below title (smaller font)
+        date_bbox = draw.textbbox((0, 0), date_text, font=date_font)
+        date_x = (img.width - (date_bbox[2] - date_bbox[0])) // 2
+        draw.text((date_x, 48), date_text, fill=(180, 180, 180, 255), font=date_font)
+
+        # Add stats panel below title (separate panel, similar to legend style)
+        if city_stats:
+            try:
+                panel_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 24)
+            except (OSError, IOError):
+                try:
+                    panel_font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 24)
+                except (OSError, IOError):
+                    panel_font = font
+
+            # Sort stats by AQI (worst first)
+            sorted_stats = sorted(
+                city_stats,
+                key=lambda x: x.get("mean", 0) if x.get("mean") is not None else 0,
+                reverse=True,
+            )
+
+            # Panel dimensions - similar to legend style
+            box_size = 28
+            line_height = 38
+            num_cities = min(len(sorted_stats), 12)
+            rows_per_col = (num_cities + 1) // 2
+            panel_padding = 18
+            panel_height = panel_padding * 2 + rows_per_col * line_height
+            panel_top = title_bar_height + 16  # Gap between title and stats panel
+
+            # Draw stats panel background (separate from title)
+            draw.rectangle(
+                [0, panel_top, img.width, panel_top + panel_height],
+                fill=(0, 0, 0, 200)
+            )
+
+            # Draw stats in two columns with colored boxes (like legend)
+            col1_x = 30
+            col2_x = img.width // 2 + 20
+            start_y = panel_top + panel_padding
+
+            for i, stat in enumerate(sorted_stats[:num_cities]):
+                city = stat["city"]
+                mean_aqi = stat.get("mean")
+                if mean_aqi is not None:
+                    aqi_level = min(6, max(1, round(mean_aqi)))
+                    color = AQI_COLORS.get(aqi_level, (128, 128, 128))
+                    level_name, _ = AQI_LEVELS.get(aqi_level, ("?", "?"))
+
+                    # Determine column and position
+                    if i < rows_per_col:
+                        col_x = col1_x
+                        row = i
+                    else:
+                        col_x = col2_x
+                        row = i - rows_per_col
+
+                    y_pos = start_y + row * line_height
+
+                    # Draw colored box (like legend)
+                    draw.rectangle(
+                        [col_x, y_pos, col_x + box_size, y_pos + box_size],
+                        fill=color,
+                        outline=(255, 255, 255, 200),
+                        width=2
+                    )
+
+                    # Draw city name, level and value (like IG caption)
+                    text = f"{city}: {level_name}"
+                    text_y = y_pos + (box_size - 24) // 2
+                    draw.text((col_x + box_size + 12, text_y), text, fill=(255, 255, 255, 255), font=panel_font)
 
         # Add city labels with AQI values
         if city_stats:
@@ -205,7 +280,7 @@ def add_legend_to_image(image_path: str, city_stats: list[dict] | None = None) -
                 aqi_mean = stats_lookup.get(city)
                 if aqi_mean is not None:
                     aqi_level = min(6, max(1, round(aqi_mean)))
-                    label = f"{city}: {aqi_mean:.1f}"
+                    label = f"{city}"
 
                     # Get text size
                     text_bbox = draw.textbbox((0, 0), label, font=city_font)
