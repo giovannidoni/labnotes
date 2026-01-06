@@ -25,7 +25,12 @@ def get_article_block(item):
     return {
         "type": "section",
         "text": {"type": "mrkdwn", "text": f"*{item['summary']}*"},
-        "accessory": {"type": "button", "text": {"type": "plain_text", "text": "Read More"}, "url": item["link"]},
+        "accessory": {
+            "type": "button",
+            "text": {"type": "plain_text", "text": "Read More"},
+            "url": item["link"],
+            "action_id": "button_click"
+        },
     }
 
 
