@@ -11,10 +11,27 @@ import os
 import sys
 import traceback
 from datetime import datetime as dt
+from pathlib import Path
 from typing import Any
 
 import requests
 from PIL import Image, ImageDraw, ImageFont
+
+# Font paths - bundled with the project for cross-platform compatibility
+_FONTS_DIR = Path(__file__).parent / "fonts"
+FONT_REGULAR = _FONTS_DIR / "Inter-Regular.ttf"
+FONT_BOLD = _FONTS_DIR / "Inter-Bold.ttf"
+FONT_SEMIBOLD = _FONTS_DIR / "Inter-SemiBold.ttf"
+
+
+def get_font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
+    """Load the bundled Inter font at the specified size."""
+    font_path = FONT_BOLD if bold else FONT_REGULAR
+    try:
+        return ImageFont.truetype(str(font_path), size)
+    except (OSError, IOError):
+        logger.warning(f"Could not load font {font_path}, using default")
+        return ImageFont.load_default()
 
 from labnotes.tools.utils import setup_logging
 
@@ -122,14 +139,8 @@ def add_legend_to_image(image_path: str, city_stats: list[dict] | None = None) -
             fill=(0, 0, 0, 200)  # Semi-transparent black
         )
 
-        # Try to use a nice font, fall back to default
-        try:
-            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", font_size)
-        except (OSError, IOError):
-            try:
-                font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", font_size)
-            except (OSError, IOError):
-                font = ImageFont.load_default()
+        # Load bundled font
+        font = get_font(font_size, bold=True)
 
         # Split items into two rows (3 items each)
         items = list(AQI_LEVELS.items())
@@ -162,16 +173,8 @@ def add_legend_to_image(image_path: str, city_stats: list[dict] | None = None) -
         # Add title bar at top (two lines: title centered, date below)
         title_text = "Qualità dell'aria - @aria.padana"
         date_text = dt.now().strftime("%d/%m/%Y - %H:%M")
-        try:
-            title_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 28)
-            date_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 18)
-        except (OSError, IOError):
-            try:
-                title_font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 28)
-                date_font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 18)
-            except (OSError, IOError):
-                title_font = font
-                date_font = font
+        title_font = get_font(28, bold=True)
+        date_font = get_font(18, bold=False)
 
         title_bar_height = 70
         from_top = 8
@@ -189,13 +192,7 @@ def add_legend_to_image(image_path: str, city_stats: list[dict] | None = None) -
 
         # Add stats panel below title (separate panel, similar to legend style)
         if city_stats:
-            try:
-                panel_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 24)
-            except (OSError, IOError):
-                try:
-                    panel_font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 24)
-                except (OSError, IOError):
-                    panel_font = font
+            panel_font = get_font(24, bold=True)
 
             # Sort stats by AQI (worst first)
             sorted_stats = sorted(
@@ -257,13 +254,7 @@ def add_legend_to_image(image_path: str, city_stats: list[dict] | None = None) -
 
         # Add city labels with AQI values
         if city_stats:
-            try:
-                city_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 18)
-            except (OSError, IOError):
-                try:
-                    city_font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 18)
-                except (OSError, IOError):
-                    city_font = font
+            city_font = get_font(18, bold=True)
 
             # Create stats lookup
             stats_lookup = {s["city"]: s.get("mean") for s in city_stats}
