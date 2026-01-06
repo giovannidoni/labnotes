@@ -114,7 +114,7 @@ def add_legend_to_image(image_path: str, city_stats: list[dict] | None = None) -
         center_x = 1185000
         center_y = 5700000
         width = 750000
-        height = width * 5 / 4
+        height = width  # Square
         bbox_x_min = center_x - width / 2
         bbox_x_max = center_x + width / 2
         bbox_y_min = center_y - height / 2
@@ -315,12 +315,12 @@ def fetch_air_quality_image(output_path: str = "./out/aria_padana.png", size: in
     Returns:
         Path to the saved image, or None if download failed.
     """
-    # Bounding box for Po Valley region - 4:5 aspect ratio (portrait for Instagram)
+    # Bounding box for Po Valley region - square format
     # Zoomed in on Northern Italy
     center_x = 1185000  # Center on Po Valley
     center_y = 5700000
-    width = 750000  # Narrower view
-    height = width * 5 / 4  # 4:5 aspect ratio
+    width = 750000
+    height = width  # Square
 
     x_min = center_x - width / 2
     x_max = center_x + width / 2
@@ -329,9 +329,9 @@ def fetch_air_quality_image(output_path: str = "./out/aria_padana.png", size: in
 
     bbox = f"{x_min},{y_min},{x_max},{y_max}"
 
-    # Image size: 1080x1350 for 4:5 aspect ratio
+    # Image size: square
     img_width = size
-    img_height = int(size * 5 / 4)
+    img_height = size
 
     params = {
         "bbox": bbox,
