@@ -232,19 +232,29 @@ jobs:
 
           ls -la ./out/
 
-      - name: Upload image to S3
+      - name: Upload to S3
         id: s3_upload
         run: |
           DATE_PATH=$(date +"%Y/%m/%d")
-          S3_KEY="aria-padana/${DATE_PATH}/aria_padana.png"
+          S3_BASE="aria-padana/${DATE_PATH}"
 
           if [ -f "./out/aria_padana.png" ]; then
-            aws s3 cp ./out/aria_padana.png s3://labnotes-storage/aria-padana/${S3_KEY} --content-type "image/png"
-            IMAGE_URL="https://labnotes-storage.s3.eu-west-2.amazonaws.com/aria-padana/${S3_KEY}"
+            aws s3 cp ./out/aria_padana.png s3://labnotes-storage/${S3_BASE}/aria_padana.png --content-type "image/png"
+            IMAGE_URL="https://labnotes-storage.s3.eu-west-2.amazonaws.com/${S3_BASE}/aria_padana.png"
             echo "image_url=${IMAGE_URL}" >> $GITHUB_OUTPUT
             echo "Uploaded image to: ${IMAGE_URL}"
           else
             echo "Image file not found"
+            exit 1
+          fi
+
+          if [ -f "./out/aria_padana.json" ]; then
+            aws s3 cp ./out/aria_padana.json s3://labnotes-storage/${S3_BASE}/aria_padana.json --content-type "application/json"
+            JSON_URL="https://labnotes-storage.s3.eu-west-2.amazonaws.com/${S3_BASE}/aria_padana.json"
+            echo "json_url=${JSON_URL}" >> $GITHUB_OUTPUT
+            echo "Uploaded JSON to: ${JSON_URL}"
+          else
+            echo "JSON file not found"
             exit 1
           fi
 
