@@ -194,17 +194,11 @@ def add_legend_to_image(image_path: str, city_stats: list[dict] | None = None) -
         if city_stats:
             panel_font = get_font(24, bold=True)
 
-            # Sort stats by AQI (worst first)
-            sorted_stats = sorted(
-                city_stats,
-                key=lambda x: x.get("mean", 0) if x.get("mean") is not None else 0,
-                reverse=True,
-            )
-
             # Panel dimensions - similar to legend style
+            # city_stats is already sorted by fetch_all_city_stats()
             box_size = 28
             line_height = 38
-            num_cities = len(sorted_stats)  # Show all cities
+            num_cities = len(city_stats)  # Show all cities
             rows_per_col = (num_cities + 1) // 2
             panel_padding = 18
             panel_height = panel_padding * 2 + rows_per_col * line_height
@@ -221,7 +215,7 @@ def add_legend_to_image(image_path: str, city_stats: list[dict] | None = None) -
             col2_x = img.width // 2 + 20
             start_y = panel_top + panel_padding
 
-            for i, stat in enumerate(sorted_stats[:num_cities]):
+            for i, stat in enumerate(city_stats[:num_cities]):
                 city = stat["city"]
                 mean_aqi = stat.get("mean")
                 if mean_aqi is not None:
@@ -274,24 +268,30 @@ def add_legend_to_image(image_path: str, city_stats: list[dict] | None = None) -
                     aqi_level = min(6, max(1, round(aqi_mean)))
                     label = f"{city}"
 
-                    # Get text size
+                    # Get text bounding box and center it on city position
                     text_bbox = draw.textbbox((0, 0), label, font=city_font)
-                    text_width = text_bbox[2] - text_bbox[0]
-                    text_height = text_bbox[3] - text_bbox[1]
+                    bbox_width = text_bbox[2] - text_bbox[0]
+                    bbox_height = text_bbox[3] - text_bbox[1]
 
-                    # Center label on city position
-                    label_x = px - text_width // 2
-                    label_y = py - text_height // 2
+                    # Calculate text position to center the bbox on (px, py)
+                    # Account for bbox offset (text_bbox[0], text_bbox[1] may not be 0)
+                    text_x = px - (text_bbox[0] + text_bbox[2]) // 2
+                    text_y = py - (text_bbox[1] + text_bbox[3]) // 2
 
-                    # Draw background
+                    # Calculate actual bbox position after drawing
+                    actual_bbox_x = text_x + text_bbox[0]
+                    actual_bbox_y = text_y + text_bbox[1]
+
+                    # Draw background centered on the text
                     pad = 4
                     draw.rectangle(
-                        [label_x - pad, label_y - pad, label_x + text_width + pad, label_y + text_height + pad],
+                        [actual_bbox_x - pad, actual_bbox_y - pad,
+                         actual_bbox_x + bbox_width + pad, actual_bbox_y + bbox_height + pad],
                         fill=(0, 0, 0, 160)
                     )
 
                     # Draw text
-                    draw.text((label_x, label_y), label, fill=(255, 255, 255, 255), font=city_font)
+                    draw.text((text_x, text_y), label, fill=(255, 255, 255, 255), font=city_font)
 
         # Composite overlay onto image
         result = Image.alpha_composite(img, overlay)
@@ -448,7 +448,13 @@ def fetch_all_city_stats() -> list[dict[str, Any]]:
         if stats:
             all_stats.append(stats)
 
-    return all_stats
+    sorted_stats = sorted(
+        all_stats,
+        key=lambda x: x.get("mean", 0) if x.get("mean") is not None else 0,
+        reverse=False,
+    )
+
+    return sorted_stats
 
 
 def format_stats_for_post(stats: list[dict[str, Any]]) -> str:
@@ -471,14 +477,8 @@ def format_stats_for_post(stats: list[dict[str, Any]]) -> str:
         "",
     ]
 
-    # Sort cities by AQI (worst first)
-    sorted_stats = sorted(
-        stats,
-        key=lambda x: x.get("mean", 0) if x.get("mean") is not None else 0,
-        reverse=True,
-    )
-
-    for stat in sorted_stats:
+    # stats is already sorted by fetch_all_city_stats()
+    for stat in stats:
         city = stat["city"]
         mean_aqi = stat.get("mean")
 
