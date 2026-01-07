@@ -10,7 +10,7 @@ import logging
 import os
 import sys
 import traceback
-from datetime import datetime as dt
+from datetime import datetime as dt, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -51,7 +51,6 @@ CITY_BBOXES = {
     "Trieste": "1523626,5714358,1543626,5734358",
     "Trento": "1227995,5782344,1247995,5802344",
     "Udine":  "1463267,5781745,1483267,5801745",
-    "Bolzano": "1254006,5850564,1274006,5870564",
     "Ferrara": "1283509,5586073,1303509,5606073"
 }
 
@@ -70,7 +69,6 @@ CITY_CENTERS = {
     "Trieste": (1533626, 5724358),
     "Trento": (1237995, 5792344),
     "Udine":   (1473267, 5791745),
-    "Bolzano": (1264006, 5860564),
     "Ferrara": (1293509, 5596073)
 }
 
@@ -172,7 +170,9 @@ def add_legend_to_image(image_path: str, city_stats: list[dict] | None = None) -
 
         # Add title bar at top (two lines: title centered, date below)
         title_text = "Qualità dell'aria - @aria.padana"
-        date_text = dt.now().strftime("%d/%m/%Y - %H:%M")
+        now = dt.now()
+        rounded = now.replace(minute=0, second=0, microsecond=0) + timedelta(hours=now.minute >= 30)
+        date_text = rounded.strftime("%d/%m/%Y - %H:%M")
         title_font = get_font(28, bold=True)
         date_font = get_font(18, bold=False)
 
