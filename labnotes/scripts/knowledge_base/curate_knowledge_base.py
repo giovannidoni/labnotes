@@ -151,11 +151,11 @@ def main(source, dest, limit=None, overwrite=False):
             original_date = extract_date_from_filename(filename)
             date_obj = datetime.strptime(original_date, "%Y-%m-%d")
             target_dir = os.path.join(dest, date_obj.strftime("%Y"), date_obj.strftime("%m"))
-            os.makedirs(target_dir, exist_ok=True)
 
             with open(os.path.join(source, filename), "r", encoding="utf-8") as f:
                 raw_content = f.read()
 
+            os.makedirs(target_dir, exist_ok=True)
             current_uuid = extract_uuid_from_content(raw_content)
 
             # Check if file with this chat_id already exists
@@ -221,7 +221,7 @@ def main(source, dest, limit=None, overwrite=False):
 
                     os.utime(output_path, (date_obj.timestamp(), date_obj.timestamp()))
 
-            time.sleep(0.5)
+                time.sleep(0.5)
 
     # --- FINAL REPORT ---
     print("\n" + "=" * 40)
