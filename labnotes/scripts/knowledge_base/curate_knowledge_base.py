@@ -32,20 +32,22 @@ def curate_with_gemini_3(content):
     Digital Archivist & Knowledge Engineer.
     
     # INSTRUCTIONS
-    1. FILTER: Return {{"action": "DELETE"}} if the chat is low-value/trivial.
+    1. FILTER: Return {{"action": "DELETE"}} if the chat meet one of the following:
+       - TRIVIAL: Lacks substantive content (e.g., too general, too short and query on a file).
+       - ITERATIVE NOISE: Contains coding iterations that are too specific/granular.
+       - EPHEMERAL/NICHE: Primarily about a niche topic or mundane logistics.
+       - SIMPLE UTILITY: Simple translation, proofreading, or copy-editing.
     2. DISTILL:
-       - inquiry: 1-sentence summary of the user's intent.
+       - inquiry: 1-sentence summary of intent.
        - findings: 2-3 key insights discovered.
        - outcomes: 2-3 actionable results.
-       - solution: The final, corrected answer (code, text, or steps).
-    3. TRANSCRIPT: Use nested callouts for User/AI dialogue:
-       User: `> [!question] USER \n> [Text]`
-       AI: `> [!abstract] AI \n> [Text]`
+       - solution: The final, corrected answer.
+    3. TRANSCRIPT: Use nested callouts for User/AI dialogue.
     
     # OUTPUT FORMAT
     Return ONLY JSON:
     [{{
-      "title": "...",  # Short, descriptive title, this will be use as filename, should be camelCase-friendly
+      "title": "...", # Short title, use camelCase or underscores
       "tags": ["..."],
       "inquiry": "...",
       "findings": ["...", "..."],
@@ -77,18 +79,25 @@ def main(source, dest):
     
     print(f"🚀 Processing {len(files)} files for the vault...")
 
-    for filename in files[:5]:
+    for filename in files:
         original_date = extract_date_from_filename(filename)
-        path = os.path.join(source, filename)
+        # Parse year and month for subfolders
+        date_obj = datetime.strptime(original_date, '%Y-%m-%d')
+        year_str = date_obj.strftime('%Y')
+        month_str = date_obj.strftime('%m')
         
+        # Create target subfolder: dest/YYYY/MM
+        target_dir = os.path.join(dest, year_str, month_str)
+        os.makedirs(target_dir, exist_ok=True)
+
+        path = os.path.join(source, filename)
         with open(path, 'r', encoding='utf-8') as f:
             raw_content = f.read()
         
-        # Capture UUID before redaction/distillation
         current_uuid = extract_uuid_from_content(raw_content)
         redacted_text = local_redactor(raw_content)
 
-        print(f"🧠 Distilling into Unified Box: {filename}")
+        print(f"🧠 Distilling into {year_str}/{month_str}: {filename}")
         results = curate_with_gemini_3(redacted_text)
 
         if results and isinstance(results, list):
@@ -98,10 +107,9 @@ def main(source, dest):
                 safe_title = re.sub(r'[\\/*?:"<>|]', "", item['title'])[:50].strip().replace(" ", "_")
                 suffix = f"_part{i+1}" if len(results) > 1 else ""
                 output_fn = f"{original_date}_{safe_title}{suffix}.md"
-                output_path = os.path.join(dest, output_fn)
+                output_path = os.path.join(target_dir, output_fn)
 
                 with open(output_path, 'w', encoding='utf-8') as f:
-                    # 1. FRONTMATTER (Properties)
                     f.write("---\n")
                     f.write(f"title: \"{item['title']}\"\n")
                     f.write(f"date: {original_date}\n")
@@ -110,7 +118,6 @@ def main(source, dest):
                     f.write(f"original_source: \"{filename}\"\n")
                     f.write("---\n\n")
 
-                    # 2. THE UNIFIED INSIGHT BOX
                     f.write(f"> [!todo] **Session Intel**\n")
                     f.write(f"> **Goal:** {item.get('inquiry', '')}\n")
                     f.write(f"> \n")
@@ -123,18 +130,14 @@ def main(source, dest):
                         f.write(f"> - ✅ {out}\n")
                     f.write(f"> \n")
                     f.write(f"> **💡 Final Solution:**\n")
-                    # Indent the solution to keep it inside the callout
                     indented_sol = item.get('solution', '').replace("\n", "\n> ")
                     f.write(f"> {indented_sol}\n\n")
 
-                    # 3. THE TRANSCRIPT (COLLAPSED)
                     f.write(f"> [!quote]- Full Transcript (Source Context)\n")
                     nested_chat = item.get('transcript', '').replace("\n", "\n> ")
                     f.write(f"> {nested_chat}\n")
 
-                # Sync system date to original chat date
-                dt = datetime.strptime(original_date, '%Y-%m-%d')
-                ts = dt.timestamp()
+                ts = date_obj.timestamp()
                 os.utime(output_path, (ts, ts))
         
         time.sleep(1)
