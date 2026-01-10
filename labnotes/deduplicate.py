@@ -6,7 +6,6 @@ Reads digest output, filters similar items keeping the most recent or highest sc
 
 import argparse
 import asyncio
-import json
 import logging
 import sys
 import traceback
@@ -167,7 +166,7 @@ async def main_async():
     # Find the most recent JSON file in the input path
     try:
         input_file = find_most_recent_file(input_path, pattern=f"{args.section}*digest_*.json")
-    except FileNotFoundError as e:
+    except FileNotFoundError:
         logger.info("No digest files found, please run the digest command first.")
         return 0
 
@@ -202,7 +201,7 @@ async def main_async():
 
         return 0
 
-    except Exception as e:
+    except Exception:
         error = traceback.format_exc()
         logger.error(f"Deduplication failed: {error}")
         return 1
@@ -216,7 +215,7 @@ def main():
     except KeyboardInterrupt:
         logger.info("Process interrupted by user")
         sys.exit(130)
-    except Exception as e:
+    except Exception:
         error = traceback.format_exc()
         logger.error(f"Unexpected error: {error}")
         sys.exit(1)

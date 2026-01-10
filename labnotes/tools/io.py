@@ -2,8 +2,6 @@ import json
 import logging
 import os
 import traceback
-from datetime import datetime as dt
-from pathlib import Path
 from typing import Any, Dict, List
 
 import aiofiles
@@ -18,7 +16,7 @@ def save_output(items: List[Dict[str, Any]], output_path: str) -> None:
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(items, f, indent=2, ensure_ascii=False)
         logger.info(f"Saved {len(items)} items to {output_path}")
-    except Exception as e:
+    except Exception:
         error = traceback.format_exc()
         logger.error(f"Failed to save file {output_path}: {error}")
         raise
@@ -32,7 +30,7 @@ def load_input(filepath: str) -> List[Dict[str, Any]]:
 
         logger.info(f"Loaded {len(items)} items from {filepath}")
         return items
-    except Exception as e:
+    except Exception:
         error = traceback.format_exc()
         logger.error(f"Failed to load JSON file {filepath}: {error}")
         raise
@@ -60,7 +58,7 @@ async def write_file(filepath: str, content: str) -> None:
         async with aiofiles.open(filepath, "w", encoding="utf-8") as f:
             await f.write(content)
         logger.debug(f"Successfully wrote file: {filepath}")
-    except Exception as e:
+    except Exception:
         error = traceback.format_exc()
         logger.error(f"Failed to write file {filepath}: {error}")
         raise

@@ -5,7 +5,6 @@ Uses LiteLLM for provider-agnostic embedding generation (supports Gemini, OpenAI
 
 import asyncio
 import logging
-import os
 import traceback
 from typing import Any, Dict, List, Optional, Union
 
@@ -50,9 +49,9 @@ class LiteLLMEmbeddingService:
             # GEMINI_API_KEY for Gemini, OPENAI_API_KEY for OpenAI, etc.
             logger.info(f"Initializing embedding service with model: {self.model_name}")
             self.initialized = True
-            logger.info(f"Successfully initialized embedding service")
+            logger.info("Successfully initialized embedding service")
             return True
-        except Exception as e:
+        except Exception:
             error = traceback.format_exc()
             logger.error(f"Failed to initialize embedding service: {error}")
             return False
@@ -68,7 +67,7 @@ class LiteLLMEmbeddingService:
         main_content = full_content if len(full_content) > len(content) else content
 
         # Combine title and content, but avoid excessive duplication
-        if title and not title.lower() in main_content.lower()[:200]:
+        if title and title.lower() not in main_content.lower()[:200]:
             text = f"{title}. {main_content}"
         else:
             text = main_content or title
@@ -103,7 +102,7 @@ class LiteLLMEmbeddingService:
             logger.debug(f"Generated embedding for '{item.get('title', 'Unknown')[:50]}...': shape={embedding.shape}")
             return embedding
 
-        except Exception as e:
+        except Exception:
             error = traceback.format_exc()
             logger.warning(f"Failed to generate embedding for '{item.get('title', 'Unknown')[:50]}...': {error}")
             return None
@@ -148,7 +147,7 @@ def get_embedding_service(
             _litellm_embedding_service = LiteLLMEmbeddingService(model_name)
         return _litellm_embedding_service
 
-    except Exception as e:
+    except Exception:
         error = traceback.format_exc()
         logger.error(f"Failed to create embedding service: {error}")
         return None

@@ -8,7 +8,6 @@ import argparse
 import asyncio
 import json
 import logging
-import os
 import sys
 import traceback
 from pathlib import Path
@@ -41,7 +40,7 @@ def load_prompt_template(prompt_type) -> str:
     try:
         with open(prompt_file, "r", encoding="utf-8") as f:
             return f.read().strip()
-    except Exception as e:
+    except Exception:
         error = traceback.format_exc()
         logger.error(f"Failed to load prompt template from {prompt_file}: {error}")
         return None
@@ -74,7 +73,7 @@ class SummarisationService:
             self.initialized = True
             logger.info(f"Successfully initialized summarisation service with model: {self.model_name}")
             return True
-        except Exception as e:
+        except Exception:
             error = traceback.format_exc()
             logger.error(f"Failed to initialize summarisation service: {error}")
             return False
@@ -89,7 +88,7 @@ class SummarisationService:
         main_content = full_content if len(full_content) > len(content) else content
 
         # Combine title and content
-        if title and not title.lower() in main_content.lower()[:200]:
+        if title and title.lower() not in main_content.lower()[:200]:
             text = f"Title: {title}\n\nContent: {main_content}"
         else:
             text = f"Content: {main_content or title}"
@@ -135,12 +134,12 @@ class SummarisationService:
                         f"Generated summary for '{item.get('title', 'Unknown')[:50]}...': {summary_data.get('summary', '')[:50]}..."
                     )
                     return summary_data
-                except json.JSONDecodeError as e:
+                except json.JSONDecodeError:
                     error = traceback.format_exc()
                     logger.error(f"Failed to parse summary JSON for '{item.get('title', 'Unknown')[:50]}...': {error}")
                     return None
 
-            except Exception as e:
+            except Exception:
                 error = traceback.format_exc()
                 logger.error(f"Failed to generate summary for '{item.get('title', 'Unknown')[:50]}...': {error}")
                 return None
@@ -222,7 +221,7 @@ async def main_async():
         input_file = find_most_recent_file(
             input_path, pattern=f"{args.section}*{settings.summarise.prev_file_prefix}_*.json"
         )
-    except FileNotFoundError as e:
+    except FileNotFoundError:
         logger.info("No deduped files found, please run the digest and deduped command first.")
         return 0
 
@@ -257,7 +256,7 @@ async def main_async():
 
         return 0
 
-    except Exception as e:
+    except Exception:
         error = traceback.format_exc()
         logger.error(f"summarisation failed: {error}")
         return 1
@@ -271,7 +270,7 @@ def main():
     except KeyboardInterrupt:
         logger.info("Process interrupted by user")
         sys.exit(130)
-    except Exception as e:
+    except Exception:
         error = traceback.format_exc()
         logger.error(f"Unexpected error: {error}")
         sys.exit(1)

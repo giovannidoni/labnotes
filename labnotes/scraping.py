@@ -34,7 +34,7 @@ def domain_of(link: str) -> str:
         domain = urlparse(link).netloc.replace("www.", "")
         logger.debug(f"Extracted domain: {domain} from {link}")
         return domain
-    except Exception as e:
+    except Exception:
         error = traceback.format_exc()
         logger.warning(f"Failed to extract domain from {link}: {error}")
         return ""
@@ -52,7 +52,7 @@ def is_pdf_url(url: str) -> bool:
         )
         logger.debug(f"PDF check for {url}: {is_pdf}")
         return is_pdf
-    except Exception as e:
+    except Exception:
         error = traceback.format_exc()
         logger.warning(f"Error checking if URL is PDF {url}: {error}")
         return False
@@ -88,7 +88,7 @@ async def scrape_with_newspaper(session: aiohttp.ClientSession, url: str, timeou
         logger.info(f"Newspaper3k successfully scraped {url}: {len(result)} chars extracted")
         return result
 
-    except Exception as e:
+    except Exception:
         error = traceback.format_exc()
         logger.warning(f"Newspaper3k failed for {url}: {error}")
         return ""
@@ -142,7 +142,7 @@ async def scrape_with_beautifulsoup(session: aiohttp.ClientSession, url: str, ti
         logger.info(f"BeautifulSoup successfully scraped {url}: {len(result)} chars extracted")
         return result
 
-    except Exception as e:
+    except Exception:
         error = traceback.format_exc()
         logger.warning(f"BeautifulSoup failed for {url}: {error}")
         return ""
@@ -179,7 +179,7 @@ async def scrape_with_trafilatura(session: aiohttp.ClientSession, url: str, time
         logger.info(f"Trafilatura successfully scraped {url}: {len(result)} chars extracted")
         return result
 
-    except Exception as e:
+    except Exception:
         error = traceback.format_exc()
         logger.warning(f"Trafilatura failed for {url}: {error}")
         return ""
@@ -227,7 +227,7 @@ def scrape_with_firecrawl(url: str, firecrawl_app: Optional[FirecrawlApp] = None
             logger.warning(f"Firecrawl returned no usable content for {url}")
         return result
 
-    except Exception as e:
+    except Exception:
         error = traceback.format_exc()
         logger.warning(f"Firecrawl failed for {url}: {error}")
         return ""
@@ -242,7 +242,7 @@ async def follow_aggregator_link(session: aiohttp.ClientSession, url: str, timeo
         domain = parsed_url.netloc.lower()
 
         if "takara.ai" in domain:
-            logger.info(f"Detected Takara aggregator, attempting to find original source")
+            logger.info("Detected Takara aggregator, attempting to find original source")
             headers = {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
             }
@@ -291,7 +291,7 @@ async def follow_aggregator_link(session: aiohttp.ClientSession, url: str, timeo
                             if original_domain != domain and original_domain:
                                 logger.info(f"Found original source: {original_url} (from {url})")
                                 return original_url, original_domain
-                    except Exception as e:
+                    except Exception:
                         error = traceback.format_exc()
                         logger.debug(f"Error processing selector {selector}: {error}")
                         continue
@@ -325,7 +325,7 @@ async def follow_aggregator_link(session: aiohttp.ClientSession, url: str, timeo
         logger.debug(f"No aggregator pattern matched for {url}, using original")
         return url, domain_of(url)
 
-    except Exception as e:
+    except Exception:
         error = traceback.format_exc()
         logger.warning(f"Failed to follow aggregator link {url}: {error}")
         return url, domain_of(url)

@@ -29,7 +29,7 @@ def get_article_block(item):
             "type": "button",
             "text": {"type": "plain_text", "text": "Read More"},
             "url": item["link"],
-            "action_id": "button_click"
+            "action_id": "button_click",
         },
     }
 
@@ -146,7 +146,7 @@ def _main():
 
     # Send to Slack
     if settings.publish.slack:
-        logger.info(f"Publishing on Slack...")
+        logger.info("Publishing on Slack...")
         post_to_slack(blocks)
 
     # Build block for LinkedIn post
@@ -155,7 +155,7 @@ def _main():
 
     # Send to LinkedIn
     if dt.now().weekday() == 0 and settings.publish.linkedin:
-        logger.info(f"Publishing on LinkedIn...")
+        logger.info("Publishing on LinkedIn...")
         post_to_linkedin(text)
 
     logger.info(f"LinkedIn post content generated: {text}")
@@ -169,7 +169,7 @@ def main():
     except KeyboardInterrupt:
         logger.info("Process interrupted by user")
         sys.exit(130)
-    except Exception as e:
+    except Exception:
         error = traceback.format_exc()
         logger.error(f"Unexpected error: {error}")
         sys.exit(1)

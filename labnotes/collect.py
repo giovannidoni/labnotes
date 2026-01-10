@@ -7,7 +7,6 @@ Reads digest output, filters similar items keeping the most recent or highest sc
 import argparse
 import json
 import logging
-import os
 import sys
 import traceback
 from pathlib import Path
@@ -49,7 +48,7 @@ class ResultSummarisationService:
             self.initialized = True
             logger.info(f"Successfully initialized summarisation service with model: {self.model_name}")
             return True
-        except Exception as e:
+        except Exception:
             error = traceback.format_exc()
             logger.error(f"Failed to initialize summarisation service: {error}")
             return False
@@ -157,14 +156,14 @@ class ResultSummarisationService:
             try:
                 logger.info(f"Generated result summary: {summary_response}")
                 summary_data = json.loads(summary_response)
-                logger.debug(f"Generated result summary.")
+                logger.debug("Generated result summary.")
                 return summary_data
-            except json.JSONDecodeError as e:
+            except json.JSONDecodeError:
                 error = traceback.format_exc()
                 logger.warning(f"Failed to parse result summary JSON: {error}")
                 return None
 
-        except Exception as e:
+        except Exception:
             error = traceback.format_exc()
             logger.warning(f"Failed to generate result summary: {error}")
             return None
@@ -265,7 +264,7 @@ def _main():
 
             section_items[section] = items
 
-        except Exception as e:
+        except Exception:
             error = traceback.format_exc()
             logger.error(f"Failed to process section {section}: {error}")
             continue
@@ -285,7 +284,7 @@ def main():
     except KeyboardInterrupt:
         logger.info("Process interrupted by user")
         sys.exit(130)
-    except Exception as e:
+    except Exception:
         error = traceback.format_exc()
         logger.error(f"Unexpected error: {error}")
         sys.exit(1)

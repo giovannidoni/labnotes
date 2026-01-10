@@ -63,7 +63,7 @@ def within_hours(entry, hours: int) -> bool:
     if dt:
         logger.debug(f"Entry date: {dt}, cutoff: {cutoff}, within range: {within_range}")
     else:
-        logger.debug(f"No valid date found for entry, excluding from results")
+        logger.debug("No valid date found for entry, excluding from results")
     return within_range
 
 
@@ -326,7 +326,7 @@ async def fetch_all(
             try:
                 firecrawl_app = FirecrawlApp(api_key=api_key)
                 logger.info("Using Firecrawl for web scraping")
-            except Exception as e:
+            except Exception:
                 error = traceback.format_exc()
                 logger.warning(f"Failed to initialize Firecrawl: {error}")
                 logger.info("Falling back to newspaper3k scraping")
@@ -443,7 +443,7 @@ async def main_async():
         with open(settings.keywords_file, "r", encoding="utf-8") as f:
             kw = json.load(f)
         logger.info(f"Loaded keywords configuration from {settings.keywords_file}")
-    except Exception as e:
+    except Exception:
         error = traceback.format_exc()
         logger.error(f"Failed to load configuration files: {error}")
         return 1
@@ -469,7 +469,7 @@ def main():
     except KeyboardInterrupt:
         logger.info("Process interrupted by user")
         sys.exit(130)
-    except Exception as e:
+    except Exception:
         error = traceback.format_exc()
         logger.error(f"Unexpected error: {error}")
         sys.exit(1)
@@ -482,7 +482,7 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         logger.info("Process interrupted by user")
         sys.exit(130)
-    except Exception as e:
+    except Exception:
         error = traceback.format_exc()
         logger.error(f"Unexpected error: {error}")
         sys.exit(1)

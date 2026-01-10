@@ -10,7 +10,8 @@ import logging
 import os
 import sys
 import traceback
-from datetime import datetime as dt, timedelta
+from datetime import datetime as dt
+from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
@@ -33,6 +34,7 @@ def get_font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont | ImageFon
         logger.warning(f"Could not load font {font_path}, using default")
         return ImageFont.load_default()
 
+
 from labnotes.tools.utils import setup_logging
 
 logger = logging.getLogger(__name__)
@@ -50,8 +52,8 @@ CITY_BBOXES = {
     "Parma": "1139697,5580326,1159697,5600326",
     "Trieste": "1523626,5714358,1543626,5734358",
     "Trento": "1227995,5782344,1247995,5802344",
-    "Udine":  "1463267,5781745,1483267,5801745",
-    "Ferrara": "1283509,5586073,1303509,5606073"
+    "Udine": "1463267,5781745,1483267,5801745",
+    "Ferrara": "1283509,5586073,1303509,5606073",
 }
 
 
@@ -68,20 +70,20 @@ CITY_CENTERS = {
     "Parma": (1149697, 5590326),
     "Trieste": (1533626, 5724358),
     "Trento": (1237995, 5792344),
-    "Udine":   (1473267, 5791745),
-    "Ferrara": (1293509, 5596073)
+    "Udine": (1473267, 5791745),
+    "Ferrara": (1293509, 5596073),
 }
 
 
 # AQI level descriptions (European AQI scale) - in Italian
 # Emojis chosen to best match the EEA colormap
 AQI_LEVELS = {
-    1: ("Buona", "🔵"),      # cyan (80,240,230) → blue is closest
-    2: ("Discreta", "🟢"),   # teal (80,204,170) → green
-    3: ("Moderata", "🟡"),   # yellow (240,230,65)
-    4: ("Scarsa", "🔴"),     # red (255,80,80)
+    1: ("Buona", "🔵"),  # cyan (80,240,230) → blue is closest
+    2: ("Discreta", "🟢"),  # teal (80,204,170) → green
+    3: ("Moderata", "🟡"),  # yellow (240,230,65)
+    4: ("Scarsa", "🔴"),  # red (255,80,80)
     5: ("Molto Scarsa", "🟤"),  # dark red (150,0,50) → brown is closest
-    6: ("Pessima", "🟣"),    # purple (125,33,129)
+    6: ("Pessima", "🟣"),  # purple (125,33,129)
 }
 
 # Base URLs for the EEA ArcGIS service
@@ -89,13 +91,14 @@ BASE_URL = "https://air.discomap.eea.europa.eu/arcgis/rest/services/AQMobile_202
 
 # AQI colors (RGB) matching the EEA colormap used in the API request
 AQI_COLORS = {
-    1: (80, 240, 230),    # Buona - cyan
-    2: (80, 204, 170),    # Discreta - teal/green
-    3: (240, 230, 65),    # Moderata - yellow
-    4: (255, 80, 80),     # Scarsa - red
-    5: (150, 0, 50),      # Molto Scarsa - dark red/maroon
-    6: (125, 33, 129),    # Pessima - purple
+    1: (80, 240, 230),  # Buona - cyan
+    2: (80, 204, 170),  # Discreta - teal/green
+    3: (240, 230, 65),  # Moderata - yellow
+    4: (255, 80, 80),  # Scarsa - red
+    5: (150, 0, 50),  # Molto Scarsa - dark red/maroon
+    6: (125, 33, 129),  # Pessima - purple
 }
+
 
 def add_legend_to_image(image_path: str, city_stats: list[dict] | None = None) -> None:
     """
@@ -134,7 +137,7 @@ def add_legend_to_image(image_path: str, city_stats: list[dict] | None = None) -
         legend_y = img.height - legend_height
         draw.rectangle(
             [0, legend_y, img.width, img.height],
-            fill=(0, 0, 0, 200)  # Semi-transparent black
+            fill=(0, 0, 0, 200),  # Semi-transparent black
         )
 
         # Load bundled font
@@ -161,7 +164,7 @@ def add_legend_to_image(image_path: str, city_stats: list[dict] | None = None) -
                     [col_x, y_pos, col_x + box_size, y_pos + box_size],
                     fill=color,
                     outline=(255, 255, 255, 220),
-                    width=2
+                    width=2,
                 )
 
                 # Draw label in white
@@ -205,10 +208,7 @@ def add_legend_to_image(image_path: str, city_stats: list[dict] | None = None) -
             panel_top = title_bar_height + 16  # Gap between title and stats panel
 
             # Draw stats panel background (separate from title)
-            draw.rectangle(
-                [0, panel_top, img.width, panel_top + panel_height],
-                fill=(0, 0, 0, 200)
-            )
+            draw.rectangle([0, panel_top, img.width, panel_top + panel_height], fill=(0, 0, 0, 200))
 
             # Draw stats in two columns with colored boxes (like legend)
             col1_x = 30
@@ -238,7 +238,7 @@ def add_legend_to_image(image_path: str, city_stats: list[dict] | None = None) -
                         [col_x, y_pos, col_x + box_size, y_pos + box_size],
                         fill=color,
                         outline=(255, 255, 255, 200),
-                        width=2
+                        width=2,
                     )
 
                     # Draw city name, level and value (like IG caption)
@@ -285,9 +285,13 @@ def add_legend_to_image(image_path: str, city_stats: list[dict] | None = None) -
                     # Draw background centered on the text
                     pad = 4
                     draw.rectangle(
-                        [actual_bbox_x - pad, actual_bbox_y - pad,
-                         actual_bbox_x + bbox_width + pad, actual_bbox_y + bbox_height + pad],
-                        fill=(0, 0, 0, 160)
+                        [
+                            actual_bbox_x - pad,
+                            actual_bbox_y - pad,
+                            actual_bbox_x + bbox_width + pad,
+                            actual_bbox_y + bbox_height + pad,
+                        ],
+                        fill=(0, 0, 0, 160),
                     )
 
                     # Draw text
@@ -470,7 +474,7 @@ def format_stats_for_post(stats: list[dict[str, Any]]) -> str:
     today = dt.now().strftime("%d/%m/%Y")
 
     lines = [
-        f"🌬️ Qualità dell'Aria - Pianura Padana",
+        "🌬️ Qualità dell'Aria - Pianura Padana",
         f"📅 {today}",
         "",
         "📊 Indice di Qualità dell'Aria per città:",
@@ -490,12 +494,14 @@ def format_stats_for_post(stats: list[dict[str, Any]]) -> str:
         else:
             lines.append(f"❓ {city}: Dati non disponibili")
 
-    lines.extend([
-        "",
-        "🔗 Fonte: European Environment Agency",
-        "",
-        "#AirQuality #QualitaDellAria #PianuraPadana #Italia #Smog #AQI",
-    ])
+    lines.extend(
+        [
+            "",
+            "🔗 Fonte: European Environment Agency",
+            "",
+            "#AirQuality #QualitaDellAria #PianuraPadana #Italia #Smog #AQI",
+        ]
+    )
 
     return "\n".join(lines)
 
@@ -519,7 +525,9 @@ def post_to_instagram(image_url: str, caption: str) -> bool:
     account_id = os.getenv("INSTAGRAM_BUSINESS_ACCOUNT_ID")
 
     if not access_token or not account_id:
-        logger.error("Instagram credentials not configured. Set INSTAGRAM_ACCESS_TOKEN and INSTAGRAM_BUSINESS_ACCOUNT_ID")
+        logger.error(
+            "Instagram credentials not configured. Set INSTAGRAM_ACCESS_TOKEN and INSTAGRAM_BUSINESS_ACCOUNT_ID"
+        )
         return False
 
     if not image_url:
@@ -646,7 +654,7 @@ def main():
     except KeyboardInterrupt:
         logger.info("Process interrupted by user")
         sys.exit(130)
-    except Exception as e:
+    except Exception:
         error = traceback.format_exc()
         logger.error(f"Unexpected error: {error}")
         sys.exit(1)
@@ -660,7 +668,7 @@ def post_main():
     except KeyboardInterrupt:
         logger.info("Process interrupted by user")
         sys.exit(130)
-    except Exception as e:
+    except Exception:
         error = traceback.format_exc()
         logger.error(f"Unexpected error: {error}")
         sys.exit(1)

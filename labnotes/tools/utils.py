@@ -1,9 +1,7 @@
-import json
 import logging
-import os
 import traceback
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import List
 
 import yaml
 
@@ -44,7 +42,7 @@ def get_feed_sections(pipeline: str = "website") -> List[str]:
         logger.debug(f"Found {len(sections)} feed sections: {sections}")
         return sections
 
-    except Exception as e:
+    except Exception:
         error = traceback.format_exc()
         logger.error(f"Failed to load feed sections: {error}")
         return []

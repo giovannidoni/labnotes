@@ -6,7 +6,7 @@ Removes items that are too similar to each other, keeping the most recent ones.
 import logging
 import traceback
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List
 
 import numpy as np
 
@@ -33,7 +33,7 @@ def calculate_cosine_similarity(embedding1: np.ndarray, embedding2: np.ndarray) 
 
         return similarity
 
-    except Exception as e:
+    except Exception:
         error = traceback.format_exc()
         logger.error(f"Failed to calculate cosine similarity: {error}")
         return 0.0
