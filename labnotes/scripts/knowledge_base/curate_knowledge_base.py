@@ -1,29 +1,40 @@
-import os, json, re, argparse, time
-from litellm import completion 
+import os, json, re, argparse, time, logging
+import litellm
 from datetime import datetime
+from tqdm import tqdm
+from tqdm.contrib.logging import logging_redirect_tqdm
 
-# --- CONFIG ---
-# GEMINI_API_KEY must be in your environment variables.
+# --- LOGGING SETUP ---
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
+litellm.set_verbose = False
+logging.getLogger("LiteLLM").setLevel(logging.CRITICAL)
+
 
 def extract_date_from_filename(filename):
-    """Parses YYYY-MM-DD from the source filename."""
     match = re.search(r'(\d{4}-\d{2}-\d{2})', filename)
     return match.group(1) if match else datetime.now().strftime('%Y-%m-%d')
 
+
 def extract_uuid_from_content(content):
-    """Parses the chat_id from the Stage 1 Markdown frontmatter."""
     match = re.search(r'chat_id:\s*"(.*?)"', content)
     return match.group(1) if match else "unknown"
 
+
 def local_redactor(text):
-    """Masks emails locally before sending to API."""
     email_re = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
     return re.sub(email_re, "[EMAIL_REDACTED]", text)
 
+
 def to_camel_case(text):
-    """Converts tags to Obsidian-friendly camelCase."""
     words = re.findall(r'[a-zA-Z0-9]+', text)
     return words[0].lower() + "".join(w.capitalize() for w in words[1:]) if words else ""
+
+
+def to_kebab_case(text):
+    words = re.findall(r'[a-zA-Z0-9]+', text)
+    return "-".join(w.lower() for w in words) if words else ""
+
 
 def curate_with_gemini_3(content):
     """Gemini 3 Flash: Curation logic with structured insight extraction."""
@@ -32,119 +43,154 @@ def curate_with_gemini_3(content):
     Digital Archivist & Knowledge Engineer.
     
     # INSTRUCTIONS
-    1. FILTER: Return {{"action": "DELETE"}} if the chat meet one of the following:
-       - TRIVIAL: Lacks substantive content (e.g., too general, too short and query on a file).
-       - ITERATIVE NOISE: Contains coding iterations that are too specific/granular.
-       - EPHEMERAL/NICHE: Primarily about a niche topic or mundane logistics.
-       - SIMPLE UTILITY: Simple translation, proofreading, or copy-editing.
-    2. DISTILL:
-       - inquiry: 1-sentence summary of intent.
-       - findings: 2-3 key insights discovered.
-       - outcomes: 2-3 actionable results.
-       - solution: The final, corrected answer.
-    3. TRANSCRIPT: Use nested callouts for User/AI dialogue.
+    1. **FILTER**: Return {{"action": "DELETE"}} if the chat meets any:
+       - TRIVIAL: Lacks substantive content.
+       - ITERATIVE NOISE: Granular coding iterations or redundant debugging.
+       - EPHEMERAL/NICHE: Mundane logistics or zero future value.
+       - SENSITIVE DATA: Contains keys, secrets, or PII.
+       - SIMPLE UTILITY: Simple translation or copy-editing.
+
+    2. **MULTI-TOPIC SPLITTING**: 
+       - If the user switches between unrelated technical topics, return a SEPARATE JSON object for each in the array.
+       - If the chat is one continuous flow, return a single-object array.
+
+    3. **DISTILL (Per Object)**:
+       - summary: A concise 2-3 sentence overview of what was accomplished in this session.
+       - inquiry: 1-sentence summary of the specific root intent.
+       - findings: 2-3 key technical insights.
+       - outcomes: 2-3 actionable results/fixes achieved.
+       - solution: The final, optimized definitive answer or code.
+
+    4. **TRANSCRIPT (Per Object)**: 
+       - Relevant dialogue ONLY. Format: `**User**: ...` and `**AI**: ...`.
+       - Leave a blank line between exchanges.
+       - If a chat was interrupted, skip the incomplete turn.
     
     # OUTPUT FORMAT
     Return ONLY JSON:
     [{{
-      "title": "...", # Short title, use camelCase or underscores
-      "tags": ["..."],
+      "title": "...", # Short title, use camelCase, no special chars, max 60 chars
+      "tags": ["..."], # each tag must be "-" separated, no spaces
+      "summary": "...",      
       "inquiry": "...",
       "findings": ["...", "..."],
       "outcomes": ["...", "..."],
       "solution": "...",
       "transcript": "...",
-      "action": "KEEP"
+      "action": "KEEP" | "DELETE"
     }}]
 
     # CONTENT
     {content}
     """
     try:
-        response = completion(
+        response = litellm.completion(
             model="gemini/gemini-3-flash-preview", 
             messages=[{"role": "user", "content": prompt}],
             response_format={ "type": "json_object" },
-            reasoning_effort="low",
             temperature=1.0
         )
-        return json.loads(response.choices[0].message.content)
-    except Exception as e:
-        print(f"❌ API Error: {e}")
-        return None
+        
+        # Token usage tracking
+        usage = response.usage
+        token_stats = {
+            "prompt": usage.prompt_tokens,
+            "completion": usage.completion_tokens,
+            "total": usage.total_tokens
+        }
 
-def main(source, dest):
+        res_data = json.loads(response.choices[0].message.content)
+        # Ensure array format
+        results = res_data if isinstance(res_data, list) else res_data.get("data", [res_data])
+        
+        return results, token_stats
+    except Exception as e:
+        logger.error(f"❌ API Error: {e}")
+        return None, None
+
+
+def main(source, dest, limit=None):
     os.makedirs(dest, exist_ok=True)
     files = [f for f in os.listdir(source) if f.endswith(".md")]
     
-    print(f"🚀 Processing {len(files)} files for the vault...")
+    # Tracking aggregates
+    totals = {"prompt": 0, "completion": 0, "files": 0}
 
-    for filename in files:
-        original_date = extract_date_from_filename(filename)
-        # Parse year and month for subfolders
-        date_obj = datetime.strptime(original_date, '%Y-%m-%d')
-        year_str = date_obj.strftime('%Y')
-        month_str = date_obj.strftime('%m')
-        
-        # Create target subfolder: dest/YYYY/MM
-        target_dir = os.path.join(dest, year_str, month_str)
-        os.makedirs(target_dir, exist_ok=True)
+    total_files = len(files) if limit is None else min(limit, len(files))
+    logging.info(f"🚀 Processing {total_files} files...")
 
-        path = os.path.join(source, filename)
-        with open(path, 'r', encoding='utf-8') as f:
-            raw_content = f.read()
-        
-        current_uuid = extract_uuid_from_content(raw_content)
-        redacted_text = local_redactor(raw_content)
+    # Redirect logging so it doesn't break tqdm bar
+    with logging_redirect_tqdm():
+        files_to_process = files[:limit] if limit else files
+        for filename in tqdm(files_to_process, desc="📂 Archiving", unit="chat"):
+            original_date = extract_date_from_filename(filename)
+            date_obj = datetime.strptime(original_date, '%Y-%m-%d')
+            target_dir = os.path.join(dest, date_obj.strftime('%Y'), date_obj.strftime('%m'))
+            os.makedirs(target_dir, exist_ok=True)
 
-        print(f"🧠 Distilling into {year_str}/{month_str}: {filename}")
-        results = curate_with_gemini_3(redacted_text)
+            with open(os.path.join(source, filename), 'r', encoding='utf-8') as f:
+                raw_content = f.read()
+            
+            current_uuid = extract_uuid_from_content(raw_content)
+            results, tokens = curate_with_gemini_3(local_redactor(raw_content))
 
-        if results and isinstance(results, list):
-            for i, item in enumerate(results):
-                if item.get("action") == "DELETE": continue
-                
-                safe_title = re.sub(r'[\\/*?:"<>|]', "", item['title'])[:50].strip().replace(" ", "_")
-                suffix = f"_part{i+1}" if len(results) > 1 else ""
-                output_fn = f"{original_date}_{safe_title}{suffix}.md"
-                output_path = os.path.join(target_dir, output_fn)
+            if results and tokens:
+                totals["prompt"] += tokens["prompt"]
+                totals["completion"] += tokens["completion"]
+                totals["files"] += 1
 
-                with open(output_path, 'w', encoding='utf-8') as f:
-                    f.write("---\n")
-                    f.write(f"title: \"{item['title']}\"\n")
-                    f.write(f"date: {original_date}\n")
-                    f.write(f"tags: {[to_camel_case(t) for t in item.get('tags', [])]}\n")
-                    f.write(f"chat_id: \"{current_uuid}\"\n")
-                    f.write(f"original_source: \"{filename}\"\n")
-                    f.write("---\n\n")
+                for i, item in enumerate(results):
+                    if item.get("action") == "DELETE": continue
+                    
+                    safe_title = re.sub(r'[\\/*?:"<>|]', "", item['title']).strip().replace(" ", "_")
+                    suffix = f"_part{i+1}" if len(results) > 1 else ""
+                    output_fn = f"{original_date}_{safe_title}{suffix}.md"
+                    output_path = os.path.join(target_dir, output_fn)
 
-                    f.write(f"> [!todo] **Session Intel**\n")
-                    f.write(f"> **Goal:** {item.get('inquiry', '')}\n")
-                    f.write(f"> \n")
-                    f.write(f"> **Insights:**\n")
-                    for fnd in item.get('findings', []):
-                        f.write(f"> - {fnd}\n")
-                    f.write(f"> \n")
-                    f.write(f"> **Outcomes:**\n")
-                    for out in item.get('outcomes', []):
-                        f.write(f"> - ✅ {out}\n")
-                    f.write(f"> \n")
-                    f.write(f"> **💡 Final Solution:**\n")
-                    indented_sol = item.get('solution', '').replace("\n", "\n> ")
-                    f.write(f"> {indented_sol}\n\n")
+                    with open(output_path, 'w', encoding='utf-8') as f:
+                        f.write("---\n")
+                        f.write(f"title: \"{item['title']}\"\n")
+                        f.write(f"date: {original_date}\n")
+                        f.write(f"tags: {[to_kebab_case(t) for t in item.get('tags', [])]}\n")
+                        f.write(f"chat_id: \"{current_uuid}\"\n")
+                        f.write(f"original_source: \"{filename}\"\n")
+                        f.write("---\n\n")
+                        
+                        f.write(f"## Summary\n\n")
+                        f.write(f"{item.get('summary', '')}\n\n")
+                        
+                        f.write(f"> [!todo] **Session Intel**\n")
+                        f.write(f"> **Goal:** {item.get('inquiry', '')}\n>\n")
+                        f.write(f"> **Insights:**\n")
+                        for fnd in item.get('findings', []): f.write(f"> - {fnd}\n")
+                        f.write(f"> \n> **Outcomes:**\n")
+                        for out in item.get('outcomes', []): f.write(f"> - ✅ {out}\n")
+                        
+                        sol = item.get('solution', '')
+                        if sol:
+                            sol = '> ' + sol.replace("\n", "\n> ")
+                        f.write(f"> \n> **💡 Solution:**\n{sol}\n\n")
+                        
+                        trans = item.get('transcript', '')
+                        if trans:
+                            trans = '> ' + trans.replace("\n", "\n> ")
+                        f.write(f"> [!quote]- Full Transcript\n{trans}\n")
 
-                    f.write(f"> [!quote]- Full Transcript (Source Context)\n")
-                    nested_chat = item.get('transcript', '').replace("\n", "\n> ")
-                    f.write(f"> {nested_chat}\n")
+                    os.utime(output_path, (date_obj.timestamp(), date_obj.timestamp()))
+            
+            time.sleep(0.5)
 
-                ts = date_obj.timestamp()
-                os.utime(output_path, (ts, ts))
-        
-        time.sleep(1)
+    # --- FINAL REPORT ---
+    print("\n" + "="*40)
+    print(f"🏁 DONE: {totals['files']} files processed.")
+    print(f"📊 Prompt Tokens: {totals['prompt']} | Completion: {totals['completion']}")
+    print(f"💰 Est. Cost: ${(totals['prompt']*0.075 + totals['completion']*0.3) / 1_000_000:.4f}")
+    print("="*40)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("source", help="Path to staging folder")
     parser.add_argument("dest", help="Path to obsidian vault")
+    parser.add_argument("--limit", type=int, default=None, help="Process only first N files (default: process all)")
     args = parser.parse_args()
-    main(args.source, args.dest)
+    main(args.source, args.dest, args.limit)
