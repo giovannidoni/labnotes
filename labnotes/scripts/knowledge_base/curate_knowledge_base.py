@@ -96,14 +96,16 @@ def curate_with_gemini_3(content):
     [{{
       "title": "...", # Short title, use camelCase, no special chars, max 60 chars
       "tags": ["..."], # each tag must be "-" separated, no spaces
-      "summary": "...",      
+      "summary": "...",  
       "inquiry": "...",
       "findings": ["...", "..."],
       "outcomes": ["...", "..."],
       "solution": "...",
-      "transcript": "...",
+      "transcript": "...",  
       "action": "KEEP" | "DELETE"
     }}]
+
+    NB: Make sure it has correct character escaping for markdown formatting throughout
 
     # CONTENT
     {content}
