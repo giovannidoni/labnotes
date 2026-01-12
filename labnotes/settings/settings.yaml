@@ -1,7 +1,7 @@
 website:
   dynaconf_merge: true
   name: "website"
-  llm_model: "gemini/gemini-2.0-flash"
+  llm_model: "gemini/gemini-3-flash-preview"
   embedding_model: "gemini/text-embedding-004"
   digest:
     top: 100
@@ -27,7 +27,7 @@ website:
 website-local:
   dynaconf_merge: true
   name: "website"
-  llm_model: "gemini/gemini-2.0-flash"
+  llm_model: "gemini/gemini-3-flash-preview"
   embedding_model: "gemini/text-embedding-004"
   summarise:
     prev_file_prefix: "deduped"
@@ -51,7 +51,7 @@ website-local:
 
 mountainmap:
   name: "mountainmap"
-  llm_model: "gemini/gemini-2.0-flash"
+  llm_model: "gemini/gemini-3-flash-preview"
   embedding_model: "gemini/text-embedding-004"
   digest:
     top: 100
@@ -68,7 +68,7 @@ mountainmap:
 
 mountainmap-local:
   name: "mountainmap"
-  llm_model: "gemini/gemini-2.0-flash"
+  llm_model: "gemini/gemini-3-flash-preview"
   embedding_model: "gemini/text-embedding-004"
   digest:
     top: 5
