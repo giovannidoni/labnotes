@@ -28,6 +28,6 @@ The digest section is in markdowns:
         "reason_for_choice": [reason for picking this headline]
     }
   ]
-  "digest": [markwon summarising most important information across other post in a bullet point form, remberding to add links to sources]
+  "digest": [markwon summarising most important information across other post in a bullet point list form (numbered using letters), remberding to add links to sources]
 }
 ```

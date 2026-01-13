@@ -2,7 +2,7 @@ name: CI - Build and Test Docker Image
 
 on:
   schedule:
-    - cron: '0 12 * * 1'  # Website: Mondays at 12:00 PM UTC
+    - cron: '0 12 * * 1,4'  # Website: Mondays at 12:00 PM UTC
     - cron: '0 8 * * *'   # Aria Padana: Daily at 8:00 AM UTC
   workflow_dispatch:
     inputs:
@@ -78,7 +78,7 @@ jobs:
 
   website:
     needs: build-test
-    if: ${{ github.event.schedule == '0 12 * * 1' || inputs.only == '' || inputs.only == 'website' }}
+    if: ${{ github.event.schedule == '0 12 * * 1,4' || inputs.only == '' || inputs.only == 'website' }}
     runs-on: ubuntu-latest
     environment: labnotes  # Add this line to use environment secrets
 
