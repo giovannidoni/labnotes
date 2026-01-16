@@ -54,6 +54,7 @@ CITY_BBOXES = {
     "Trento": "1227995,5782344,1247995,5802344",
     "Udine": "1463267,5781745,1483267,5801745",
     "Ferrara": "1283509,5586073,1303509,5606073",
+    "Alessandria": "949000,5602000,969000,5622000",
 }
 
 
@@ -72,6 +73,7 @@ CITY_CENTERS = {
     "Trento": (1237995, 5792344),
     "Udine": (1473267, 5791745),
     "Ferrara": (1293509, 5596073),
+    "Alessandria": (959000, 5612000),
 }
 
 
@@ -127,7 +129,7 @@ def add_legend_to_image(image_path: str, city_stats: list[dict] | None = None) -
         box_spacing = 10
         font_size = 28
         row_spacing = 14
-        col_width = 340  # Fixed column width for alignment
+        col_width = 320  # Fixed column width for alignment
 
         # Create overlay for legend background
         overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
@@ -148,20 +150,50 @@ def add_legend_to_image(image_path: str, city_stats: list[dict] | None = None) -
         row1 = items[:3]
         row2 = items[3:]
 
+        # Measure actual widths for each item
+        num_cols = 3
+        col_widths = []
+        
+        # Find the maximum width needed for each column position
+        for col_idx in range(num_cols):
+            max_width = 0
+            for row_items in [row1, row2]:
+                level, (label, _) = row_items[col_idx]
+                label_bbox = draw.textbbox((0, 0), label, font=font)
+                label_width = label_bbox[2] - label_bbox[0]
+                item_width = box_size + box_spacing + label_width
+                max_width = max(max_width, item_width)
+            col_widths.append(max_width)
+        
+        # Center the middle element (column 1, index 1) on the image center
+        # and space the other elements equally to left and right
+        img_center = img.width // 2
+        
+        # Calculate equal spacing between columns
+        col_gap = 140  # Gap between columns
+        
+        # Position the middle column: center the entire element (box + text) at image center
+        col1_x = img_center - col_widths[1] // 2  # Center of middle element (box + text)
+        
+        # Space first column to the left
+        col0_x = col1_x - col_widths[0] - col_gap
+        
+        # Space third column to the right
+        col2_x = col1_x + col_widths[1] + col_gap
+        
+        col_positions = [col0_x, col1_x, col2_x]
+        
         for row_idx, row_items in enumerate([row1, row2]):
-            # Start position for row (centered)
-            total_width = col_width * len(row_items)
-            x_start = (img.width - total_width) // 2
-
             y_pos = legend_y + 14 + row_idx * (box_size + row_spacing)
 
-            for i, (level, (label, _)) in enumerate(row_items):
+            # Draw each item at its calculated position
+            for col_idx, (level, (label, _)) in enumerate(row_items):
+                current_x = col_positions[col_idx]
                 color = AQI_COLORS[level]
-                col_x = x_start + i * col_width
 
                 # Draw colored box
                 draw.rectangle(
-                    [col_x, y_pos, col_x + box_size, y_pos + box_size],
+                    [current_x, y_pos, current_x + box_size, y_pos + box_size],
                     fill=color,
                     outline=(255, 255, 255, 220),
                     width=2,
@@ -169,7 +201,7 @@ def add_legend_to_image(image_path: str, city_stats: list[dict] | None = None) -
 
                 # Draw label in white
                 label_y = y_pos + (box_size - font_size) // 2
-                draw.text((col_x + box_size + box_spacing, label_y), label, fill=(255, 255, 255, 255), font=font)
+                draw.text((current_x + box_size + box_spacing, label_y), label, fill=(255, 255, 255, 255), font=font)
 
         # Add title bar at top (two lines: title centered, date below)
         title_text = "Qualità dell'aria - @aria.padana"
@@ -210,41 +242,90 @@ def add_legend_to_image(image_path: str, city_stats: list[dict] | None = None) -
             # Draw stats panel background (separate from title)
             draw.rectangle([0, panel_top, img.width, panel_top + panel_height], fill=(0, 0, 0, 200))
 
-            # Draw stats in two columns with colored boxes (like legend)
-            col1_x = 30
-            col2_x = img.width // 2 + 20
+            # Measure actual widths for each column to center items properly
+            col0_items = []  # First column items
+            col1_items = []  # Second column items
+            
+            for i, stat in enumerate(city_stats[:num_cities]):
+                city = stat["city"]
+                mean_aqi = stat.get("mean")
+                if mean_aqi is not None:
+                    aqi_level = min(6, max(1, round(mean_aqi)))
+                    level_name, _ = AQI_LEVELS.get(aqi_level, ("?", "?"))
+                    text = f"{city}: {level_name} ({mean_aqi:.1f})"
+                    
+                    # Measure text width
+                    text_bbox = draw.textbbox((0, 0), text, font=panel_font)
+                    text_width = text_bbox[2] - text_bbox[0]
+                    item_width = box_size + 12 + text_width  # box + spacing + text
+                    
+                    if i < rows_per_col:
+                        col0_items.append((i, stat, item_width))
+                    else:
+                        col1_items.append((i, stat, item_width))
+            
+            # Find max width in each column for alignment
+            max_col0_width = max((w for _, _, w in col0_items), default=0)
+            max_col1_width = max((w for _, _, w in col1_items), default=0)
+            
+            # Position columns: center each column's content within its half of the image
+            col0_center = img.width // 4  # Center of left half
+            col1_center = 3 * img.width // 4  # Center of right half
+            
+            col0_x = col0_center - max_col0_width // 2
+            col1_x = col1_center - max_col1_width // 2
+            
             start_y = panel_top + panel_padding
 
-            for i, stat in enumerate(city_stats[:num_cities]):
+            # Draw items in first column
+            for idx, stat, item_width in col0_items:
                 city = stat["city"]
                 mean_aqi = stat.get("mean")
                 if mean_aqi is not None:
                     aqi_level = min(6, max(1, round(mean_aqi)))
                     color = AQI_COLORS.get(aqi_level, (128, 128, 128))
                     level_name, _ = AQI_LEVELS.get(aqi_level, ("?", "?"))
-
-                    # Determine column and position
-                    if i < rows_per_col:
-                        col_x = col1_x
-                        row = i
-                    else:
-                        col_x = col2_x
-                        row = i - rows_per_col
-
+                    
+                    row = idx
                     y_pos = start_y + row * line_height
 
                     # Draw colored circle
                     draw.ellipse(
-                        [col_x, y_pos, col_x + box_size, y_pos + box_size],
+                        [col0_x, y_pos, col0_x + box_size, y_pos + box_size],
                         fill=color,
                         outline=(255, 255, 255, 200),
                         width=2,
                     )
 
-                    # Draw city name, level and value (like IG caption)
-                    text = f"{city}: {level_name}"
+                    # Draw city name, level and value
+                    text = f"{city}: {level_name} ({mean_aqi:.1f})"
                     text_y = y_pos + (box_size - 24) // 2
-                    draw.text((col_x + box_size + 12, text_y), text, fill=(255, 255, 255, 255), font=panel_font)
+                    draw.text((col0_x + box_size + 12, text_y), text, fill=(255, 255, 255, 255), font=panel_font)
+            
+            # Draw items in second column
+            for idx, stat, item_width in col1_items:
+                city = stat["city"]
+                mean_aqi = stat.get("mean")
+                if mean_aqi is not None:
+                    aqi_level = min(6, max(1, round(mean_aqi)))
+                    color = AQI_COLORS.get(aqi_level, (128, 128, 128))
+                    level_name, _ = AQI_LEVELS.get(aqi_level, ("?", "?"))
+                    
+                    row = idx - rows_per_col
+                    y_pos = start_y + row * line_height
+
+                    # Draw colored circle
+                    draw.ellipse(
+                        [col1_x, y_pos, col1_x + box_size, y_pos + box_size],
+                        fill=color,
+                        outline=(255, 255, 255, 200),
+                        width=2,
+                    )
+
+                    # Draw city name, level and value
+                    text = f"{city}: {level_name} ({mean_aqi:.1f})"
+                    text_y = y_pos + (box_size - 24) // 2
+                    draw.text((col1_x + box_size + 12, text_y), text, fill=(255, 255, 255, 255), font=panel_font)
 
         # Add city labels with AQI values
         if city_stats:
