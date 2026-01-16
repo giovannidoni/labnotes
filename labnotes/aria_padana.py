@@ -204,7 +204,7 @@ def add_legend_to_image(image_path: str, city_stats: list[dict] | None = None) -
                 draw.text((current_x + box_size + box_spacing, label_y), label, fill=(255, 255, 255, 255), font=font)
 
         # Add title bar at top (two lines: title centered, date below)
-        title_text = "Qualità dell'aria - @aria.padana"
+        title_text = "Qualità dell'aria - @aria.padana.info"
         now = dt.now()
         rounded = now.replace(minute=0, second=0, microsecond=0) + timedelta(hours=now.minute >= 30)
         date_text = rounded.strftime("%d/%m/%Y - %H:%M")
