@@ -308,6 +308,26 @@ def add_legend_to_image(image_path: str, city_stats: list[dict] | None = None) -
         logger.error(f"Failed to add legend to image: {e}")
 
 
+def get_unix_timestamp_at(hour: int = 8, days_ago: int = 0) -> int:
+    """
+    Get Unix timestamp in milliseconds for a specific hour.
+    
+    Args:
+        hour: Hour of the day (0-23, default is 8 for 8:00 AM)
+        days_ago: Number of days to go back (0 = today, 1 = yesterday, etc.)
+    
+    Returns:
+        Unix timestamp in milliseconds for the specified hour on the specified day.
+    """
+    now = dt.now()
+    target_time = now.replace(hour=hour, minute=0, second=0, microsecond=0)
+    
+    if days_ago > 0:
+        target_time -= timedelta(days=days_ago)
+    
+    return int(target_time.timestamp() * 1000)
+
+
 def fetch_air_quality_image(output_path: str = "./out/aria_padana.png", size: int = 1080) -> str | None:
     """
     Fetch the air quality map image for Northern Italy.
@@ -339,7 +359,7 @@ def fetch_air_quality_image(output_path: str = "./out/aria_padana.png", size: in
 
     params = {
         "bbox": bbox,
-        "bboxSR": "",
+        "bboxSR": 3857,
         "size": f"{img_width},{img_height}",
         "imageSR": "",
         "datumTransformation": "",
@@ -364,11 +384,11 @@ def fetch_air_quality_image(output_path: str = "./out/aria_padana.png", size: in
 
     try:
         response = requests.get(f"{BASE_URL}/exportImage", params=params, timeout=30)
+        logger.info(f"Fetching air quality image from {response.url}")
         response.raise_for_status()
 
         # Ensure output directory exists
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
-
         with open(output_path, "wb") as f:
             f.write(response.content)
 
@@ -391,16 +411,35 @@ def fetch_city_stats(city: str, bbox: str) -> dict[str, Any] | None:
     Returns:
         Dictionary with statistics, or None if request failed.
     """
+    unix_time = get_unix_timestamp_at(9)
+    xmin, ymin, xmax, ymax = [float(c) for c in bbox.split(",")]
     params = {
-        "geometry": bbox,
+        "geometry": json.dumps({
+                    "xmin": xmin,
+                    "ymin": ymin,
+                    "xmax": xmax,
+                    "ymax": ymax,
+                    "spatialReference": {"wkid": 3857}
+        }),
         "geometryType": "esriGeometryEnvelope",
         "sr": "3857",
-        "pixelSize": "500",
+        "time": unix_time,
+        "processAsMultidimensional": "true",
+        "pixelSize": "1000",   # Match service native resolution for better speed
+        "mosaicRule": json.dumps({
+                "mosaicMethod": "esriMosaicMatchDefinition",
+                "multidimensionalDefinition": [{
+                    "variableName": "AQI",
+                    "dimensionName": "StdTime",
+                    "values": [unix_time] # Must match the 'time' parameter
+                    }],
+        }),
         "f": "json",
     }
 
     try:
         response = requests.get(f"{BASE_URL}/computeStatisticsHistograms", params=params, timeout=30)
+        logger.info(f"Fetching air quality image from {response.url}")
         response.raise_for_status()
 
         data = response.json()
