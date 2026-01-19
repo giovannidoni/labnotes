@@ -5,7 +5,7 @@ website:
   embedding_model: "gemini/text-embedding-004"
   digest:
     top: 100
-    hours: 168
+    hours: 96 # 24 * 4
   summarise:
     prev_file_prefix: "deduped"
     save_to_supabase: true
@@ -22,7 +22,9 @@ website:
     filter_mode: "AND"
   publish:
     slack: true
+    slack_days: [1,2,3,4,5,6,7]  # 1=Monday, 7=Sunday
     linkedin: true
+    linkedin_days: [1, 5]  # 1=Monday
 
 website-local:
   dynaconf_merge: true
@@ -47,7 +49,9 @@ website-local:
     hours: 24
   publish:
     slack: false
+    slack_days: [1,2,3,4,5,6,7]
     linkedin: false
+    linkedin_days: [1]
 
 mountainmap:
   name: "mountainmap"

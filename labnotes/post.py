@@ -144,8 +144,11 @@ def _main():
     blocks = get_slack_blocks(data)
     logger.info(blocks)
 
-    # Send to Slack
-    if settings.publish.slack:
+
+    # Send to Slack if today is in allowed days
+    today = dt.now().isoweekday()  # 1=Monday, 7=Sunday
+    slack_days = getattr(settings.publish, 'slack_days', [1,2,3,4,5,6,7])
+    if settings.publish.slack and today in slack_days:
         logger.info("Publishing on Slack...")
         post_to_slack(blocks)
 
@@ -153,8 +156,10 @@ def _main():
     text = get_linkedin_block(data)
     logger.info(text)
 
-    # Send to LinkedIn
-    if dt.now().weekday() == 0 and settings.publish.linkedin:
+
+    # Send to LinkedIn if today is in allowed days
+    linkedin_days = getattr(settings.publish, 'linkedin_days', [1, 4])
+    if settings.publish.linkedin and today in linkedin_days:
         logger.info("Publishing on LinkedIn...")
         post_to_linkedin(text)
 

@@ -78,7 +78,9 @@ jobs:
 
   website:
     needs: build-test
-    if: ${{ github.event.schedule == '0 12 * * 1,4' || inputs.only == '' || inputs.only == 'website' }}
+    if: >-
+      ${{ (github.event_name == 'schedule' && github.event.schedule == '0 12 * * 1,4') ||
+          (github.event_name == 'workflow_dispatch' && (inputs.only == '' || inputs.only == 'website')) }}
     runs-on: ubuntu-latest
     environment: labnotes  # Add this line to use environment secrets
 
@@ -196,7 +198,9 @@ jobs:
 
   aria-padana:
     needs: build-test
-    if: ${{ github.event.schedule == '0 8 * * *' || inputs.only == '' || inputs.only == 'aria-padana' }}
+    if: >-
+      ${{ (github.event_name == 'schedule' && github.event.schedule == '0 8 * * *') ||
+          (github.event_name == 'workflow_dispatch' && (inputs.only == '' || inputs.only == 'aria-padana')) }}
     runs-on: ubuntu-latest
     environment: labnotes
 
