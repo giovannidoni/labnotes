@@ -13,10 +13,11 @@ Subsenquently, it the selection process:
 - create a bullet point resume in markdown format of salient finding across the other items, adding links to the articles; make sure there is a wide mix of topics and application.
 - keep this second bullet point list to max 5 elements, so that the total content size is limited to 3000 characters. 
 
-The digest section is in markdowns:
+The digest section is in markdowns summarising most important information across other post:
+- bullet points with letters as numbers
+- add links 
 - bold is with only one * surrounding words
 - links can go as their are without additional formatting, do not put them between brakets
-
 
 ```json
 {
@@ -28,6 +29,10 @@ The digest section is in markdowns:
         "reason_for_choice": [reason for picking this headline]
     }
   ]
-  "digest": [markwon summarising most important information across other post in a bullet point list form (numbered using letters), remberding to add links to sources]
+  "digest": [
+    "a) item 1 summary  link 1",
+    "b) item 2 summary link 2",
+    ...
+  ]
 }
 ```
